@@ -1,0 +1,16 @@
+[versions]
+agp = "8.11.1"
+kotlin = "1.9.23"
+composeBom = "2023.10.01"
+composeCompiler = "1.5.13"
+material3 = "1.1.2"
+composeTest = "1.5.4" # ✅ added for ui-test-junit4
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+[libraries]
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "composeTest" }
