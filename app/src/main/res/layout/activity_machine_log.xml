@@ -45,6 +45,18 @@
             android:hint="CTCViec (JobNo)"
             android:layout_marginTop="16dp" />
 
+        <AutoCompleteTextView
+            android:id="@+id/dropProOrdNo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Kết quả LSX (ProOrdNo)"
+            android:layout_marginTop="8dp"
+            android:inputType="none"
+            android:focusable="true"
+            android:background="@android:color/white"
+            android:textColor="@android:color/black"
+            android:enabled="true" />
+
         <EditText
             android:id="@+id/edtProOrdNo"
             android:layout_width="match_parent"
