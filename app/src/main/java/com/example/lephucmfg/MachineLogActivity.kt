@@ -103,19 +103,9 @@ class MachineLogActivity : AppCompatActivity() {
             }
         }
         val edtJobNo = findViewById<EditText>(R.id.edtJobNo)
-        val dropProOrdNo = findViewById<android.widget.AutoCompleteTextView>(R.id.dropProOrdNo)
+        val layoutProOrdNoResults = findViewById<android.widget.GridLayout>(R.id.layoutProOrdNoResults)
         val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
         val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
-        val proOrdAdapter = android.widget.ArrayAdapter<String>(
-            this,
-            android.R.layout.simple_dropdown_item_1line,
-            mutableListOf()
-        )
-        dropProOrdNo.setAdapter(proOrdAdapter)
-        dropProOrdNo.setOnItemClickListener { _, _, position, _ ->
-            val selected = proOrdAdapter.getItem(position)
-            if (selected != null) edtProOrdNo.setText(selected)
-        }
         edtJobNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val jobNo = edtJobNo.text.toString().trim()
@@ -133,38 +123,42 @@ class MachineLogActivity : AppCompatActivity() {
                                 jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).proOrdNo)
                                 else -> emptyList()
                             }
-                            proOrdAdapter.clear()
-                            dropProOrdNo.setText("", false)
+                            // Clear previous results
+                            layoutProOrdNoResults.removeAllViews()
                             if (proOrdList.isNotEmpty()) {
-                                // Show all results as a single string in the dropProOrdNo box
-                                dropProOrdNo.isEnabled = false
-                                dropProOrdNo.setText(proOrdList.joinToString(", "), false)
-                                // Optionally: let user tap the box to pick one
-                                dropProOrdNo.setOnClickListener {
-                                    val builder = android.app.AlertDialog.Builder(this@MachineLogActivity)
-                                    builder.setTitle("Chọn LSX (ProOrdNo)")
-                                    builder.setItems(proOrdList.toTypedArray()) { _, which ->
-                                        edtProOrdNo.setText(proOrdList[which])
+                                proOrdList.forEach { proOrdNo ->
+                                    val tv = TextView(this@MachineLogActivity)
+                                    tv.text = proOrdNo
+                                    tv.setPadding(24, 16, 24, 16)
+                                    tv.setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
+                                    tv.setTextColor(resources.getColor(android.R.color.black))
+                                    val params = android.widget.GridLayout.LayoutParams()
+                                    params.setMargins(8, 8, 8, 8)
+                                    params.width = 0
+                                    params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                                    params.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                                    tv.layoutParams = params
+                                    tv.setOnClickListener {
+                                        edtProOrdNo.setText(proOrdNo)
                                     }
-                                    builder.show()
+                                    layoutProOrdNoResults.addView(tv)
                                 }
                             } else {
-                                dropProOrdNo.isEnabled = false
-                                dropProOrdNo.setText(getString(R.string.invalid_staff), false)
-                                dropProOrdNo.setOnClickListener(null)
+                                val tv = TextView(this@MachineLogActivity)
+                                tv.text = getString(R.string.invalid_staff)
+                                tv.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                layoutProOrdNoResults.addView(tv)
                             }
                         } catch (e: Exception) {
-                            proOrdAdapter.clear()
-                            dropProOrdNo.isEnabled = false
-                            dropProOrdNo.setText(getString(R.string.invalid_staff), false)
-                            dropProOrdNo.setOnClickListener(null)
+                            layoutProOrdNoResults.removeAllViews()
+                            val tv = TextView(this@MachineLogActivity)
+                            tv.text = getString(R.string.invalid_staff)
+                            tv.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                            layoutProOrdNoResults.addView(tv)
                         }
                     }
                 } else {
-                    proOrdAdapter.clear()
-                    dropProOrdNo.isEnabled = false
-                    dropProOrdNo.setText("", false)
-                    dropProOrdNo.setOnClickListener(null)
+                    layoutProOrdNoResults.removeAllViews()
                 }
             }
         }

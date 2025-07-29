@@ -45,17 +45,14 @@
             android:hint="CTCViec (JobNo)"
             android:layout_marginTop="16dp" />
 
-        <AutoCompleteTextView
-            android:id="@+id/dropProOrdNo"
+        <!-- Replacing LinearLayout with GridLayout for 3 columns per row -->
+        <GridLayout
+            android:id="@+id/layoutProOrdNoResults"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Kết quả LSX (ProOrdNo)"
+            android:columnCount="3"
             android:layout_marginTop="8dp"
-            android:inputType="none"
-            android:focusable="true"
-            android:background="@android:color/white"
-            android:textColor="@android:color/black"
-            android:enabled="true" />
+            android:background="@android:color/white" />
 
         <EditText
             android:id="@+id/edtProOrdNo"
