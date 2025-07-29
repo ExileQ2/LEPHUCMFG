@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Button
+        android:id="@+id/btnAbTesting"
+        android:layout_width="201dp"
+        android:layout_height="204dp"
+        android:text="ABTesting" />
+
+    <Button
+        android:id="@+id/btnMachineLog"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nhật ký máy" />
+</LinearLayout>

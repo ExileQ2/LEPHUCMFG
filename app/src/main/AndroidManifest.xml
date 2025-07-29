@@ -33,7 +33,10 @@
         <activity
             android:name=".AbListActivity"
             android:exported="false"/>
-
+        <activity
+            android:name=".ABTestingActivity"
+            android:exported="false"/>
+        <activity android:name=".MachineLogActivity" />
 
     </application>
 
