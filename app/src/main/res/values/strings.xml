@@ -2,4 +2,5 @@
     <string name="app_name">LEPHUCMFG</string>
     <string name="scan_qr">Scan QR</string>
     <string name="result_will_show_here">kết quả</string>
+    <string name="invalid_staff">không hợp lệ</string>
 </resources>
