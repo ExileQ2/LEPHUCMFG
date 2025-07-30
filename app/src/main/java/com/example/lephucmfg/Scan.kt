@@ -25,6 +25,10 @@ class ScanHelper(
 
     init {
         scanButton.setOnClickListener {
+            // If no EditText has focus, focus the first field
+            if (editFields.values.none { it.hasFocus() }) {
+                fieldOrder.mapNotNull { editFields[it] }.firstOrNull()?.requestFocus()
+            }
             val integrator = IntentIntegrator(activity)
             integrator.setOrientationLocked(false)
             scanLauncher.launch(integrator.createScanIntent())
@@ -79,4 +83,3 @@ class ScanHelper(
         imm?.hideSoftInputFromWindow(view?.windowToken, 0)
     }
 }
-
