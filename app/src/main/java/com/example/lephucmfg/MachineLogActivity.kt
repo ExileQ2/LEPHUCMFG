@@ -185,6 +185,11 @@ class MachineLogActivity : AppCompatActivity() {
                                     // On click, copy result to LSX (ProOrdNo) input
                                     tv.setOnClickListener {
                                         edtProOrdNo.setText(proOrdNo)
+                                        // Quick fix: focus, unfocus, then hide keyboard to trigger value output
+                                        edtProOrdNo.requestFocus()
+                                        edtProOrdNo.clearFocus()
+                                        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                                        imm?.hideSoftInputFromWindow(edtProOrdNo.windowToken, 0)
                                     }
                                     layoutProOrdNoResults.addView(tv)
                                 }
