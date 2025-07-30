@@ -1,8 +1,13 @@
 package com.example.lephucmfg
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
@@ -227,5 +232,39 @@ class MachineLogActivity : AppCompatActivity() {
                 }
             }
         }
+        val edtSerial = findViewById<EditText>(R.id.edtSerial)
+        val btnScan = findViewById<Button>(R.id.btnScan)
+
+        // Map QR keys to EditText IDs (future-proof, add new keys here)
+        val editFields = mapOf(
+            "staffNo" to edtStaffNo,
+            "mcName" to edtMcName,
+            "jobNo" to edtJobNo,
+            "proOrdNo" to edtProOrdNo,
+            "serial" to edtSerial,
+            // fallback: also allow direct EditText id mapping
+            "edtStaffNo" to edtStaffNo,
+            "edtMcName" to edtMcName,
+            "edtJobNo" to edtJobNo,
+            "edtProOrdNo" to edtProOrdNo,
+            "edtSerial" to edtSerial
+        )
+
+        // Register ActivityResultLauncher for QR scan (must be defined before ScanHelper)
+        var scanHelper: ScanHelper? = null
+        val scanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val intent = result.data
+                val qrText = intent?.getStringExtra("SCAN_RESULT")
+                    ?: intent?.getStringExtra("SCAN_RESULT_ORIGINAL")
+                    ?: intent?.getStringExtra("SCAN_RESULT_RAW")
+                if (!qrText.isNullOrEmpty()) {
+                    scanHelper?.handleScanResult(qrText)
+                }
+            }
+        }
+
+        // Setup ScanHelper (button click launches scan)
+        scanHelper = ScanHelper(this, scanLauncher, editFields, btnScan)
     }
 }
