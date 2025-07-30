@@ -61,6 +61,15 @@
             android:hint="LSX (ProOrdNo)"
             android:layout_marginTop="16dp" />
 
+        <!-- Serial info result for LSX (ProOrdNo) -->
+        <TextView
+            android:id="@+id/txtSerialInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="8dp" />
+
         <EditText
             android:id="@+id/edtSerial"
             android:layout_width="match_parent"

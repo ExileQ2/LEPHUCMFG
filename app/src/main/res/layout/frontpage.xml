@@ -8,8 +8,8 @@
 
     <Button
         android:id="@+id/btnAbTesting"
-        android:layout_width="201dp"
-        android:layout_height="204dp"
+        android:layout_width="177dp"
+        android:layout_height="85dp"
         android:text="ABTesting" />
 
     <Button
