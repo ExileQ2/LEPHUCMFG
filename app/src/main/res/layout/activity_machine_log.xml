@@ -35,7 +35,7 @@
             android:id="@+id/edtStaffNo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Thợ (StaffNo)"
+            android:hint="Thợ"
             android:layout_marginTop="0dp" />
 
         <TextView
@@ -50,7 +50,7 @@
             android:id="@+id/edtMcName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Mã máy (McName)"
+            android:hint="Mã máy"
             android:layout_marginTop="16dp" />
 
         <TextView
@@ -65,7 +65,7 @@
             android:id="@+id/edtJobNo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="CTCViec (JobNo)"
+            android:hint="Chi tiết công việc"
             android:layout_marginTop="16dp" />
 
         <!-- Replacing LinearLayout with GridLayout for 3 columns per row -->
@@ -81,7 +81,7 @@
             android:id="@+id/edtProOrdNo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="LSX (ProOrdNo)"
+            android:hint="Lệnh sản xuất"
             android:layout_marginTop="16dp" />
 
         <!-- Serial info result for LSX (ProOrdNo) -->
