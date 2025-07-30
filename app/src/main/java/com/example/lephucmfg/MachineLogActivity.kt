@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -47,8 +48,8 @@ class MachineLogActivity : AppCompatActivity() {
     )
     // --- API interface for fetching production order (LSX/ProOrdNo) ---
     interface ProOrdApi {
-        @GET("/api/Laylsx/{A}")
-        suspend fun getProOrd(@Path("A") jobNo: String): ResponseBody
+        @GET("/api/Laylsx/{ProOrdNo}")
+        suspend fun getProOrd(@Path("ProOrdNo") jobNo: String): ResponseBody
     }
     // --- Data class for production order DTO ---
     data class ProOrdDto(
@@ -271,5 +272,24 @@ class MachineLogActivity : AppCompatActivity() {
 
         // Setup ScanHelper (button click launches scan)
         scanHelper = ScanHelper(this, scanLauncher, editFields, btnScan)
+
+        // --- UI references for mutually exclusive checkboxes ---
+        val chkGiaCong = findViewById<android.widget.CheckBox>(R.id.chkGiaCong)
+        val chkRework = findViewById<android.widget.CheckBox>(R.id.chkRework)
+        val chkSetup = findViewById<android.widget.CheckBox>(R.id.chkSetup)
+        // --- Only allow one checkbox to be checked at a time ---
+        val checkBoxes = listOf(chkGiaCong, chkRework, chkSetup)
+        checkBoxes.forEach { cb ->
+            cb.setOnCheckedChangeListener { buttonView, isChecked ->
+                if (isChecked) {
+                    checkBoxes.filter { it != buttonView }.forEach { it.isChecked = false }
+                }
+            }
+        }
+        // --- UI references for small edit boxes and note field ---
+        val edtDat = findViewById<EditText>(R.id.edtDat)
+        val edtPhe = findViewById<EditText>(R.id.edtPhe)
+        val edtXuLy = findViewById<EditText>(R.id.edtXuLy)
+        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
     }
 }

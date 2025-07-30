@@ -100,5 +100,76 @@
             android:hint="Số series"
             android:layout_marginTop="16dp" />
 
+        <!-- Add mutually exclusive checkboxes for "Gia công", "Rework", "Setup" -->
+        <LinearLayout
+            android:id="@+id/layoutCheckBoxes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
+            <CheckBox
+                android:id="@+id/chkGiaCong"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gia công"
+                android:checked="true"/>
+            <CheckBox
+                android:id="@+id/chkRework"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rework"
+                android:layout_marginStart="16dp"/>
+            <CheckBox
+                android:id="@+id/chkSetup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Setup"
+                android:layout_marginStart="16dp"/>
+        </LinearLayout>
+
+        <!-- Add 3 small edit boxes for "Đạt", "Phế", "Xử lý" -->
+        <LinearLayout
+            android:id="@+id/layoutSmallEdits"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
+            <EditText
+                android:id="@+id/edtDat"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:hint="Đạt"
+                android:inputType="number"
+                android:maxLength="3"
+                android:textAlignment="center"/>
+            <EditText
+                android:id="@+id/edtPhe"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:hint="Phế"
+                android:inputType="number"
+                android:maxLength="3"
+                android:layout_marginStart="16dp"
+                android:textAlignment="center"/>
+            <EditText
+                android:id="@+id/edtXuLy"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:hint="Xử lý"
+                android:inputType="number"
+                android:maxLength="3"
+                android:layout_marginStart="16dp"
+                android:textAlignment="center"/>
+        </LinearLayout>
+
+        <!-- Add TextEdit for "Ghi chú" -->
+        <EditText
+            android:id="@+id/edtGhiChu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ghi chú"
+            android:layout_marginTop="16dp"
+            android:inputType="text"/>
+
     </LinearLayout>
 </ScrollView>
