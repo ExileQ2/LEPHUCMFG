@@ -379,6 +379,13 @@ class MachineLogActivity : AppCompatActivity() {
 
         val postApi = RetrofitClient.retrofitPublic.create(PostNhatKyGiaCongApi::class.java)
         findViewById<Button>(R.id.btnSubmit).setOnClickListener {
+            // Prevent submit if any error message is shown
+            val invalidText = getString(R.string.invalid_staff)
+            val errorFields = listOf(txtStaffInfo, txtMachineInfo, txtSerialInfo)
+            if (errorFields.any { it.text.toString().contains(invalidText, ignoreCase = true) }) {
+                Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             val dto = NhatKyGiaCongDto(
                 processNo = txtProcessNo.text.toString().ifBlank { null },
                 jobControlNo = edtJobNo.text.toString().trim(),
