@@ -2,10 +2,12 @@ package com.example.lephucmfg
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -145,6 +147,9 @@ class MachineLogActivity : AppCompatActivity() {
         val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
         var processNoValue: String? = null // For future POST mapping
 
+        // --- Declare layoutSmallEdits reference ---
+        val layoutSmallEdits = findViewById<LinearLayout>(R.id.layoutSmallEdits)
+
         // --- Update machine info and process number when either Thợ or Mã máy loses focus ---
         edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
@@ -205,17 +210,26 @@ class MachineLogActivity : AppCompatActivity() {
                             if (staffNo.isNotEmpty()) {
                                 val processNoApi = RetrofitClient.retrofitPublic.create(ProcessNoApi::class.java)
                                 val processNoDto = processNoApi.getProcessNo(staffNo, mcName)
-                                txtProcessNo.text = processNoDto.processNo ?: ""
+                                val processNoValue = processNoDto.processNo?.trim()
+                                txtProcessNo.text = processNoValue ?: ""
+                                if (!processNoValue.isNullOrBlank()) {
+                                    layoutSmallEdits.visibility = View.VISIBLE
+                                } else {
+                                    layoutSmallEdits.visibility = View.GONE
+                                }
                             } else {
                                 txtProcessNo.text = ""
+                                layoutSmallEdits.visibility = View.GONE
                             }
                         } catch (e: Exception) {
                             txtProcessNo.text = ""
+                            layoutSmallEdits.visibility = View.GONE
                         }
                     }
                 } else {
                     txtMachineInfo.text = ""
                     txtProcessNo.text = ""
+                    layoutSmallEdits.visibility = View.GONE
                 }
             }
         }
