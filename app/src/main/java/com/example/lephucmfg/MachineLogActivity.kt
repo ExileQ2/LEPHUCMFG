@@ -23,6 +23,8 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.POST
+import retrofit2.http.Body
 
 class MachineLogActivity : AppCompatActivity() {
     // --- API interface for fetching staff info ("Thợ") ---
@@ -64,6 +66,33 @@ class MachineLogActivity : AppCompatActivity() {
     data class SerialDto(
         @SerializedName("serial") val serial: String?
     )
+    // --- API interface for fetching process number (ProcessNo) ---
+    interface ProcessNoApi {
+        @GET("/api/GetProcessNoChuaKetThuc/{StaffNo}/{McName}")
+        suspend fun getProcessNo(@Path("StaffNo") staffNo: String, @Path("McName") mcName: String): ProcessNoDto
+    }
+    data class ProcessNoDto(
+        @SerializedName("processNo") val processNo: String?
+    )
+    // --- API interface for posting machine log ---
+    interface PostNhatKyGiaCongApi {
+        @POST("/api/postNhatKyGiaCong")
+        suspend fun postLog(@Body body: NhatKyGiaCongDto): retrofit2.Response<Void>
+    }
+    data class NhatKyGiaCongDto(
+        val processNo: String?,
+        val jobControlNo: String?,
+        val staffNo: String?,
+        val mcName: String?,
+        val note: String?,
+        val proOrdNo: String?,
+        val serial: String?,
+        val setup: Boolean,
+        val rework: Boolean,
+        val qtyGood: Int,
+        val qtyReject: Int,
+        val qtyRework: Int
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +106,49 @@ class MachineLogActivity : AppCompatActivity() {
         // --- Block for handling Staff ("Thợ") input and validation ---
         edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
+                val staffNoStr = edtStaffNo.text.toString().trim()
+                if (staffNoStr.isNotEmpty()) {
+                    try {
+                        val staffNo = staffNoStr.toInt()
+                        // Fetch staff info asynchronously
+                        lifecycleScope.launch {
+                            try {
+                                val info = api.getStaff(staffNo)
+                                if (info != null) {
+                                    // Display staff info if found
+                                    txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                } else {
+                                    txtStaffInfo.setText(R.string.invalid_staff)
+                                }
+                                // Always update machine and process no after staff info is checked
+                            } catch (e: Exception) {
+                                txtStaffInfo.setText(R.string.invalid_staff)
+                            }
+                        }
+                    } catch (e: NumberFormatException) {
+                        txtStaffInfo.setText(R.string.invalid_staff)
+                    }
+                } else {
+                    txtStaffInfo.text = ""
+                }
+            }
+        }
+        // --- UI references for "Mã máy" (Machine) block ---
+        val edtMcName = findViewById<EditText>(R.id.edtMcName)
+        val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
+        val txtProcessNo = findViewById<TextView>(R.id.txtProcessNo)
+        // --- UI reference for serial info below LSX (ProOrdNo) ---
+        val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
+        val txtSerialInfo = findViewById<TextView>(R.id.txtSerialInfo) // Add this TextView in your layout XML below edtProOrdNo
+        val machineApi = RetrofitClient.retrofitPublic.create(MachineApi::class.java)
+        val serialApi = RetrofitClient.retrofitPublic.create(SerialApi::class.java)
+        val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
+        var processNoValue: String? = null // For future POST mapping
+
+        // --- Update machine info and process number when either Thợ or Mã máy loses focus ---
+        edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                // --- Block for handling Staff ("Thợ") input and validation ---
                 val staffNoStr = edtStaffNo.text.toString().trim()
                 if (staffNoStr.isNotEmpty()) {
                     try {
@@ -107,16 +179,6 @@ class MachineLogActivity : AppCompatActivity() {
                 }
             }
         }
-        // --- UI references for "Mã máy" (Machine) block ---
-        val edtMcName = findViewById<EditText>(R.id.edtMcName)
-        val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
-        // --- UI reference for serial info below LSX (ProOrdNo) ---
-        val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
-        val txtSerialInfo = findViewById<TextView>(R.id.txtSerialInfo) // Add this TextView in your layout XML below edtProOrdNo
-        val machineApi = RetrofitClient.retrofitPublic.create(MachineApi::class.java)
-        val serialApi = RetrofitClient.retrofitPublic.create(SerialApi::class.java)
-        val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
-
         // --- Block for handling Machine Code ("Mã máy") input and validation ---
         edtMcName.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
@@ -137,10 +199,23 @@ class MachineLogActivity : AppCompatActivity() {
                             // Show error if API call fails
                             txtMachineInfo.setText(R.string.invalid_staff)
                         }
+                        // Fetch ProcessNo and display under Model/Status
+                        try {
+                            val staffNo = edtStaffNo.text.toString().trim()
+                            if (staffNo.isNotEmpty()) {
+                                val processNoApi = RetrofitClient.retrofitPublic.create(ProcessNoApi::class.java)
+                                val processNoDto = processNoApi.getProcessNo(staffNo, mcName)
+                                txtProcessNo.text = processNoDto.processNo ?: ""
+                            } else {
+                                txtProcessNo.text = ""
+                            }
+                        } catch (e: Exception) {
+                            txtProcessNo.text = ""
+                        }
                     }
                 } else {
-                    // Clear machine info if input is empty
                     txtMachineInfo.text = ""
+                    txtProcessNo.text = ""
                 }
             }
         }
@@ -273,23 +348,49 @@ class MachineLogActivity : AppCompatActivity() {
         // Setup ScanHelper (button click launches scan)
         scanHelper = ScanHelper(this, scanLauncher, editFields, btnScan)
 
-        // --- UI references for mutually exclusive checkboxes ---
-        val chkGiaCong = findViewById<android.widget.CheckBox>(R.id.chkGiaCong)
-        val chkRework = findViewById<android.widget.CheckBox>(R.id.chkRework)
-        val chkSetup = findViewById<android.widget.CheckBox>(R.id.chkSetup)
-        // --- Only allow one checkbox to be checked at a time ---
-        val checkBoxes = listOf(chkGiaCong, chkRework, chkSetup)
-        checkBoxes.forEach { cb ->
-            cb.setOnCheckedChangeListener { buttonView, isChecked ->
-                if (isChecked) {
-                    checkBoxes.filter { it != buttonView }.forEach { it.isChecked = false }
+        // --- UI references for checkboxes (Rework, Setup) ---
+        val chkRework = findViewById<CheckBox>(R.id.chkRework)
+        val chkSetup = findViewById<CheckBox>(R.id.chkSetup)
+        // --- Checkbox value mapping: 1 if checked, 0 if not ---
+        var reworkValue = 0
+        var setupValue = 0
+        chkRework.setOnCheckedChangeListener { _, isChecked ->
+            reworkValue = if (isChecked) 1 else 0
+        }
+        chkSetup.setOnCheckedChangeListener { _, isChecked ->
+            setupValue = if (isChecked) 1 else 0
+        }
+        // --- UI references for note field ---
+        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
+
+        val postApi = RetrofitClient.retrofitPublic.create(PostNhatKyGiaCongApi::class.java)
+        findViewById<Button>(R.id.btnSubmit).setOnClickListener {
+            val dto = NhatKyGiaCongDto(
+                processNo = txtProcessNo.text.toString().ifBlank { null },
+                jobControlNo = edtJobNo.text.toString().trim(),
+                staffNo = edtStaffNo.text.toString().trim(),
+                mcName = edtMcName.text.toString().trim(),
+                note = edtGhiChu.text.toString().trim(),
+                proOrdNo = edtProOrdNo.text.toString().trim(),
+                serial = edtSerial.text.toString().trim(),
+                setup = chkSetup.isChecked,
+                rework = chkRework.isChecked,
+                qtyGood = 0, // Set as needed
+                qtyReject = 0, // Set as needed
+                qtyRework = 0 // Set as needed
+            )
+            lifecycleScope.launch {
+                try {
+                    val response = postApi.postLog(dto)
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@MachineLogActivity, "Gửi thành công", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MachineLogActivity, "Gửi thất bại: ${'$'}{response.code()}", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@MachineLogActivity, "Lỗi gửi: ${'$'}{e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-        // --- UI references for small edit boxes and note field ---
-        val edtDat = findViewById<EditText>(R.id.edtDat)
-        val edtPhe = findViewById<EditText>(R.id.edtPhe)
-        val edtXuLy = findViewById<EditText>(R.id.edtXuLy)
-        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
     }
 }

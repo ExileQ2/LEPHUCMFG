@@ -61,6 +61,14 @@
             android:textColor="@android:color/holo_red_dark"
             android:layout_marginTop="8dp" />
 
+        <TextView
+            android:id="@+id/txtProcessNo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="4dp" />
+
         <EditText
             android:id="@+id/edtJobNo"
             android:layout_width="match_parent"
@@ -100,7 +108,7 @@
             android:hint="Số series"
             android:layout_marginTop="16dp" />
 
-        <!-- Add mutually exclusive checkboxes for "Gia công", "Rework", "Setup" -->
+        <!-- Only two checkboxes: Rework and Setup, can be checked independently -->
         <LinearLayout
             android:id="@+id/layoutCheckBoxes"
             android:layout_width="match_parent"
@@ -108,17 +116,11 @@
             android:orientation="horizontal"
             android:layout_marginTop="16dp">
             <CheckBox
-                android:id="@+id/chkGiaCong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Gia công"
-                android:checked="true"/>
-            <CheckBox
                 android:id="@+id/chkRework"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Rework"
-                android:layout_marginStart="16dp"/>
+                android:layout_marginStart="0dp"/>
             <CheckBox
                 android:id="@+id/chkSetup"
                 android:layout_width="wrap_content"
