@@ -48,12 +48,12 @@ class MachineLogActivity : AppCompatActivity() {
     )
     // --- API interface for fetching production order (LSX/ProOrdNo) ---
     interface ProOrdApi {
-        @GET("/api/Laylsx/{ProOrdNo}")
-        suspend fun getProOrd(@Path("ProOrdNo") jobNo: String): ResponseBody
+        @GET("/api/Laylsx/{JobControlNo}")
+        suspend fun getProOrd(@Path("JobControlNo") jobControlNo: String): ResponseBody
     }
     // --- Data class for production order DTO ---
     data class ProOrdDto(
-        @SerializedName("proOrdNo") val proOrdNo: String?
+        @SerializedName("jobControlNo") val jobControlNo: String?
     )
     // --- API interface for fetching serial info (GetSerial) ---
     interface SerialApi {
@@ -162,18 +162,18 @@ class MachineLogActivity : AppCompatActivity() {
                             val jsonElement = JsonParser.parseString(json)
                             val proOrdList = when {
                                 jsonElement.isJsonArray -> jsonElement.asJsonArray.mapNotNull {
-                                    gson.fromJson(it, ProOrdDto::class.java).proOrdNo
+                                    gson.fromJson(it, ProOrdDto::class.java).jobControlNo
                                 }
-                                jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).proOrdNo)
+                                jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).jobControlNo)
                                 else -> emptyList()
                             }
                             // Clear previous results in the grid
                             layoutProOrdNoResults.removeAllViews()
                             if (proOrdList.isNotEmpty()) {
                                 // For each result, create a clickable TextView and add to grid
-                                proOrdList.forEach { proOrdNo ->
+                                proOrdList.forEach { jobControlNo ->
                                     val tv = TextView(this@MachineLogActivity)
-                                    tv.text = proOrdNo
+                                    tv.text = jobControlNo
                                     tv.setPadding(24, 16, 24, 16)
                                     tv.setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
                                     tv.setTextColor(resources.getColor(android.R.color.black))
@@ -185,7 +185,7 @@ class MachineLogActivity : AppCompatActivity() {
                                     tv.layoutParams = params
                                     // On click, copy result to LSX (ProOrdNo) input
                                     tv.setOnClickListener {
-                                        edtProOrdNo.setText(proOrdNo)
+                                        edtProOrdNo.setText(jobControlNo)
                                         // Quick fix: focus, unfocus, then hide keyboard to trigger value output
                                         edtProOrdNo.requestFocus()
                                         edtProOrdNo.clearFocus()
