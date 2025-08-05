@@ -386,8 +386,9 @@ class MachineLogActivity : AppCompatActivity() {
                 Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            val processNoForDto = txtProcessNo.text.toString().let { if (it.isBlank()) " " else it }
             val dto = NhatKyGiaCongDto(
-                processNo = txtProcessNo.text.toString().ifBlank { null },
+                processNo = processNoForDto,
                 jobControlNo = edtJobNo.text.toString().trim(),
                 staffNo = edtStaffNo.text.toString().trim(),
                 mcName = edtMcName.text.toString().trim(),
@@ -402,14 +403,18 @@ class MachineLogActivity : AppCompatActivity() {
             )
             lifecycleScope.launch {
                 try {
+                    android.util.Log.d("POST_DTO", Gson().toJson(dto)) // Log the payload
                     val response = postApi.postLog(dto)
                     if (response.isSuccessful) {
                         Toast.makeText(this@MachineLogActivity, "Gửi thành công", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@MachineLogActivity, "Gửi thất bại: ${'$'}{response.code()}", Toast.LENGTH_SHORT).show()
+                        val errorBody = response.errorBody()?.string()
+                        Toast.makeText(this@MachineLogActivity, "Gửi thất bại: ${response.code()} ${errorBody ?: ""}", Toast.LENGTH_LONG).show()
+                        android.util.Log.e("POST_ERROR", "Code: ${response.code()} Body: $errorBody")
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(this@MachineLogActivity, "Lỗi gửi: ${'$'}{e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MachineLogActivity, "Lỗi gửi: ${e.message}", Toast.LENGTH_SHORT).show()
+                    android.util.Log.e("POST_EXCEPTION", e.toString())
                 }
             }
         }
