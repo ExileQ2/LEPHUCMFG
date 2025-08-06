@@ -3,6 +3,7 @@ package com.example.lephucmfg
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
@@ -105,55 +106,113 @@ class MachineLogActivity : AppCompatActivity() {
         val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
         val api = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
 
-        // --- Block for handling Staff ("Thợ") input and validation ---
-        edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                val staffNoStr = edtStaffNo.text.toString().trim()
-                if (staffNoStr.isNotEmpty()) {
-                    try {
-                        val staffNo = staffNoStr.toInt()
-                        // Fetch staff info asynchronously
-                        lifecycleScope.launch {
-                            try {
-                                val info = api.getStaff(staffNo)
-                                if (info != null) {
-                                    // Display staff info if found
-                                    txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
-                                } else {
-                                    txtStaffInfo.setText(R.string.invalid_staff)
-                                }
-                                // Always update machine and process no after staff info is checked
-                            } catch (e: Exception) {
-                                txtStaffInfo.setText(R.string.invalid_staff)
-                            }
-                        }
-                    } catch (e: NumberFormatException) {
-                        txtStaffInfo.setText(R.string.invalid_staff)
-                    }
-                } else {
-                    txtStaffInfo.text = ""
-                }
-            }
-        }
         // --- UI references for "Mã máy" (Machine) block ---
         val edtMcName = findViewById<EditText>(R.id.edtMcName)
         val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
         val txtProcessNo = findViewById<TextView>(R.id.txtProcessNo)
+        val txtMachineRunning = findViewById<TextView>(R.id.txtMachineRunning)
+
         // --- UI reference for serial info below LSX (ProOrdNo) ---
         val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
-        val txtSerialInfo = findViewById<TextView>(R.id.txtSerialInfo) // Add this TextView in your layout XML below edtProOrdNo
+        val txtSerialInfo = findViewById<TextView>(R.id.txtSerialInfo)
         val machineApi = RetrofitClient.retrofitPublic.create(MachineApi::class.java)
         val serialApi = RetrofitClient.retrofitPublic.create(SerialApi::class.java)
         val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
-        var processNoValue: String? = null // For future POST mapping
+        var processNoValue: String? = null
 
         // --- Declare layoutSmallEdits reference ---
         val layoutSmallEdits = findViewById<LinearLayout>(R.id.layoutSmallEdits)
 
-        // --- Update machine info and process number when either Thợ or Mã máy loses focus ---
+        // --- UI references for LSX (ProOrdNo) and result grid block ---
+        val edtJobNo = findViewById<EditText>(R.id.edtJobNo)
+        val layoutProOrdNoResults = findViewById<android.widget.GridLayout>(R.id.layoutProOrdNoResults)
+
+        val edtSerial = findViewById<EditText>(R.id.edtSerial)
+        val btnScan = findViewById<Button>(R.id.btnScan)
+
+        // --- UI references for small quantity EditTexts ---
+        val edtDat = findViewById<EditText>(R.id.edtDat)
+        val edtPhe = findViewById<EditText>(R.id.edtPhe)
+        val edtXuLy = findViewById<EditText>(R.id.edtXuLy)
+
+        // --- UI references for note field and status ---
+        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
+        val txtSendStatus = findViewById<TextView>(R.id.txtSendStatus)
+        val btnSubmit = findViewById<Button>(R.id.btnSubmit)
+
+        // --- Setup IME action listeners for all EditTexts ---
+        edtStaffNo.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtMcName.requestFocus()
+                true
+            } else false
+        }
+
+        edtMcName.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtJobNo.requestFocus()
+                true
+            } else false
+        }
+
+        edtJobNo.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtProOrdNo.requestFocus()
+                true
+            } else false
+        }
+
+        edtProOrdNo.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtSerial.requestFocus()
+                true
+            } else false
+        }
+
+        edtSerial.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                if (layoutSmallEdits.visibility == View.VISIBLE) {
+                    edtDat.requestFocus()
+                } else {
+                    edtGhiChu.requestFocus()
+                }
+                true
+            } else false
+        }
+
+        edtDat.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtPhe.requestFocus()
+                true
+            } else false
+        }
+
+        edtPhe.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtXuLy.requestFocus()
+                true
+            } else false
+        }
+
+        edtXuLy.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                edtGhiChu.requestFocus()
+                true
+            } else false
+        }
+
+        edtGhiChu.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                edtGhiChu.clearFocus()
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.hideSoftInputFromWindow(edtGhiChu.windowToken, 0)
+                true
+            } else false
+        }
+
+        // --- Block for handling Staff ("Thợ") input and validation ---
         edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
-                // --- Block for handling Staff ("Thợ") input and validation ---
                 val staffNoStr = edtStaffNo.text.toString().trim()
                 if (staffNoStr.isNotEmpty()) {
                     try {
@@ -212,31 +271,34 @@ class MachineLogActivity : AppCompatActivity() {
                                 val processNoDto = processNoApi.getProcessNo(staffNo, mcName)
                                 val processNoValue = processNoDto.processNo?.trim()
                                 txtProcessNo.text = processNoValue ?: ""
+
+                                // Show/hide machine running status based on processNo
                                 if (!processNoValue.isNullOrBlank()) {
+                                    txtMachineRunning.visibility = View.VISIBLE
                                     layoutSmallEdits.visibility = View.VISIBLE
                                 } else {
+                                    txtMachineRunning.visibility = View.GONE
                                     layoutSmallEdits.visibility = View.GONE
                                 }
                             } else {
                                 txtProcessNo.text = ""
+                                txtMachineRunning.visibility = View.GONE
                                 layoutSmallEdits.visibility = View.GONE
                             }
                         } catch (e: Exception) {
                             txtProcessNo.text = ""
+                            txtMachineRunning.visibility = View.GONE
                             layoutSmallEdits.visibility = View.GONE
                         }
                     }
                 } else {
                     txtMachineInfo.text = ""
                     txtProcessNo.text = ""
+                    txtMachineRunning.visibility = View.GONE
                     layoutSmallEdits.visibility = View.GONE
                 }
             }
         }
-        // --- UI references for LSX (ProOrdNo) and result grid block ---
-        val edtJobNo = findViewById<EditText>(R.id.edtJobNo)
-        val layoutProOrdNoResults = findViewById<android.widget.GridLayout>(R.id.layoutProOrdNoResults)
-
         // --- Block for handling LSX (ProOrdNo) input and displaying results in a grid ---
         edtJobNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
@@ -327,8 +389,6 @@ class MachineLogActivity : AppCompatActivity() {
                 }
             }
         }
-        val edtSerial = findViewById<EditText>(R.id.edtSerial)
-        val btnScan = findViewById<Button>(R.id.btnScan)
 
         // Map QR keys to EditText IDs (future-proof, add new keys here)
         val editFields = mapOf(
@@ -374,11 +434,9 @@ class MachineLogActivity : AppCompatActivity() {
         chkSetup.setOnCheckedChangeListener { _, isChecked ->
             setupValue = if (isChecked) 1 else 0
         }
-        // --- UI references for note field ---
-        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
 
         val postApi = RetrofitClient.retrofitPublic.create(PostNhatKyGiaCongApi::class.java)
-        findViewById<Button>(R.id.btnSubmit).setOnClickListener {
+        btnSubmit.setOnClickListener {
             // Prevent submit if any error message is shown
             val invalidText = getString(R.string.invalid_staff)
             val errorFields = listOf(txtStaffInfo, txtMachineInfo, txtSerialInfo)
@@ -386,6 +444,14 @@ class MachineLogActivity : AppCompatActivity() {
                 Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+            // Show immediate feedback and disable button
+            Toast.makeText(this, "Dữ liệu đã được gửi", Toast.LENGTH_SHORT).show()
+            btnSubmit.isEnabled = false
+            txtSendStatus.visibility = View.VISIBLE
+            txtSendStatus.text = "Đang gửi..."
+            txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
+
             val processNoForDto = txtProcessNo.text.toString().let { if (it.isBlank()) " " else it }
             val dto = NhatKyGiaCongDto(
                 processNo = processNoForDto,
@@ -397,9 +463,9 @@ class MachineLogActivity : AppCompatActivity() {
                 serial = edtSerial.text.toString().trim(),
                 setup = chkSetup.isChecked,
                 rework = chkRework.isChecked,
-                qtyGood = 0, // Set as needed
-                qtyReject = 0, // Set as needed
-                qtyRework = 0 // Set as needed
+                qtyGood = edtDat.text.toString().toIntOrNull() ?: 0,
+                qtyReject = edtPhe.text.toString().toIntOrNull() ?: 0,
+                qtyRework = edtXuLy.text.toString().toIntOrNull() ?: 0
             )
             lifecycleScope.launch {
                 try {
@@ -407,14 +473,25 @@ class MachineLogActivity : AppCompatActivity() {
                     val response = postApi.postLog(dto)
                     if (response.isSuccessful) {
                         Toast.makeText(this@MachineLogActivity, "Gửi thành công", Toast.LENGTH_SHORT).show()
+                        txtSendStatus.text = "Gửi thành công"
+                        txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
                     } else {
                         val errorBody = response.errorBody()?.string()
-                        Toast.makeText(this@MachineLogActivity, "Gửi thất bại: ${response.code()} ${errorBody ?: ""}", Toast.LENGTH_LONG).show()
+                        val errorMessage = "Gửi thất bại ${response.code()} ${errorBody ?: ""}"
+                        Toast.makeText(this@MachineLogActivity, errorMessage, Toast.LENGTH_LONG).show()
+                        txtSendStatus.text = errorMessage
+                        txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                         android.util.Log.e("POST_ERROR", "Code: ${response.code()} Body: $errorBody")
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(this@MachineLogActivity, "Lỗi gửi: ${e.message}", Toast.LENGTH_SHORT).show()
+                    val errorMessage = "Lỗi gửi: ${e.message}"
+                    Toast.makeText(this@MachineLogActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                    txtSendStatus.text = errorMessage
+                    txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                     android.util.Log.e("POST_EXCEPTION", e.toString())
+                } finally {
+                    // Re-enable button after operation completes
+                    btnSubmit.isEnabled = true
                 }
             }
         }

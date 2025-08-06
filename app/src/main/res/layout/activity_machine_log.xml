@@ -27,7 +27,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Thợ"
-            android:layout_marginTop="0dp" />
+            android:layout_marginTop="0dp"
+            android:imeOptions="actionNext"
+            android:inputType="number" />
 
         <TextView
             android:id="@+id/txtStaffInfo"
@@ -42,7 +44,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Mã máy"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
 
         <TextView
             android:id="@+id/txtMachineInfo"
@@ -52,20 +56,38 @@
             android:textColor="@android:color/holo_red_dark"
             android:layout_marginTop="8dp" />
 
-        <TextView
-            android:id="@+id/txtProcessNo"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="@android:color/holo_blue_dark"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/txtProcessNo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""
+                android:textColor="@android:color/holo_blue_dark"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/txtMachineRunning"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Máy đang chạy"
+                android:textColor="@android:color/holo_blue_dark"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/edtJobNo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Chi tiết công việc"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
 
         <!-- Replacing LinearLayout with GridLayout for 3 columns per row -->
         <GridLayout
@@ -81,7 +103,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Lệnh sản xuất"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
 
         <!-- Serial info result for LSX (ProOrdNo) -->
         <TextView
@@ -97,7 +121,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Số series"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
 
         <!-- Only two checkboxes: Rework and Setup, can be checked independently -->
         <LinearLayout
@@ -135,7 +161,8 @@
                 android:hint="Đạt"
                 android:inputType="number"
                 android:maxLength="3"
-                android:textAlignment="center"/>
+                android:textAlignment="center"
+                android:imeOptions="actionNext"/>
             <EditText
                 android:id="@+id/edtPhe"
                 android:layout_width="48dp"
@@ -144,7 +171,8 @@
                 android:inputType="number"
                 android:maxLength="3"
                 android:layout_marginStart="16dp"
-                android:textAlignment="center"/>
+                android:textAlignment="center"
+                android:imeOptions="actionNext"/>
             <EditText
                 android:id="@+id/edtXuLy"
                 android:layout_width="48dp"
@@ -153,7 +181,8 @@
                 android:inputType="number"
                 android:maxLength="3"
                 android:layout_marginStart="16dp"
-                android:textAlignment="center"/>
+                android:textAlignment="center"
+                android:imeOptions="actionNext"/>
         </LinearLayout>
 
         <!-- Add TextEdit for "Ghi chú" -->
@@ -163,7 +192,17 @@
             android:layout_height="wrap_content"
             android:hint="Ghi chú"
             android:layout_marginTop="16dp"
-            android:inputType="text"/>
+            android:inputType="text"
+            android:imeOptions="actionDone"/>
+
+        <!-- Status TextView for showing send status -->
+        <TextView
+            android:id="@+id/txtSendStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnSubmit"
