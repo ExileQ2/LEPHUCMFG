@@ -97,6 +97,10 @@ class MachineLogActivity : AppCompatActivity() {
         val qtyRework: Int
     )
 
+    // Cache for tracking submitted processNo with timestamps
+    private val submittedProcessCache = mutableMapOf<String, Long>()
+    private val CACHE_DURATION_HOURS = 4
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_machine_log)
@@ -217,6 +221,10 @@ class MachineLogActivity : AppCompatActivity() {
                 if (staffNoStr.isNotEmpty()) {
                     try {
                         val staffNo = staffNoStr.toInt()
+                        // Show loading indicator
+                        txtStaffInfo.text = "Đang tải..."
+                        txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+
                         // Fetch staff info asynchronously
                         lifecycleScope.launch {
                             try {
@@ -224,18 +232,22 @@ class MachineLogActivity : AppCompatActivity() {
                                 if (info != null) {
                                     // Display staff info if found
                                     txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                    txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                                 } else {
                                     // Show error if staff not found
-                                    txtStaffInfo.setText(R.string.invalid_staff)
+                                    txtStaffInfo.text = "Không hợp lệ"
+                                    txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                                 }
                             } catch (e: Exception) {
-                                // Show error if API call fails
-                                txtStaffInfo.setText(R.string.invalid_staff)
+                                // Show server connection error if API call fails
+                                txtStaffInfo.text = "Không kết nối được đến server"
+                                txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             }
                         }
                     } catch (e: NumberFormatException) {
                         // Show error if input is not a number
-                        txtStaffInfo.setText(R.string.invalid_staff)
+                        txtStaffInfo.text = "Không hợp lệ"
+                        txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                     }
                 } else {
                     // Clear staff info if input is empty
@@ -248,20 +260,29 @@ class MachineLogActivity : AppCompatActivity() {
             if (!hasFocus) {
                 val mcName = edtMcName.text.toString().trim()
                 if (mcName.isNotEmpty()) {
+                    // Show loading indicator
+                    txtMachineInfo.text = "Đang tải..."
+                    txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+
                     // Launch coroutine to fetch machine info asynchronously
                     lifecycleScope.launch {
+                        var machineModel: String? = null
                         try {
                             val info = machineApi.getMachine(mcName)
                             if (info != null) {
                                 // Display machine model and status if found
                                 txtMachineInfo.text = listOfNotNull(info.model, info.status).joinToString(", ")
+                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                machineModel = info.model
                             } else {
                                 // Show error if machine not found
-                                txtMachineInfo.setText(R.string.invalid_staff)
+                                txtMachineInfo.text = "Không hợp lệ"
+                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             }
                         } catch (e: Exception) {
-                            // Show error if API call fails
-                            txtMachineInfo.setText(R.string.invalid_staff)
+                            // Show server connection error if API call fails
+                            txtMachineInfo.text = "Không kết nối được đến server"
+                            txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                         }
                         // Fetch ProcessNo and display under Model/Status
                         try {
@@ -276,19 +297,89 @@ class MachineLogActivity : AppCompatActivity() {
                                 if (!processNoValue.isNullOrBlank()) {
                                     txtMachineRunning.visibility = View.VISIBLE
                                     layoutSmallEdits.visibility = View.VISIBLE
+
+                                    // When "Máy đang chạy" appear
+                                    // Auto-fill "Chi tiết công việc" with machine model and disable editing
+                                    if (!machineModel.isNullOrBlank()) {
+                                        edtJobNo.setText(machineModel)
+                                        edtJobNo.isEnabled = false
+                                        edtJobNo.clearFocus()
+                                        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                                        imm?.hideSoftInputFromWindow(edtJobNo.windowToken, 0)
+
+                                        // Trigger ProOrdNo fetch for the auto-filled job number
+                                        lifecycleScope.launch {
+                                            try {
+                                                val responseBody = proOrdApi.getProOrd(machineModel)
+                                                val json = responseBody.string()
+                                                val gson = Gson()
+                                                val jsonElement = JsonParser.parseString(json)
+                                                val proOrdList = when {
+                                                    jsonElement.isJsonArray -> jsonElement.asJsonArray.mapNotNull {
+                                                        gson.fromJson(it, ProOrdDto::class.java).jobControlNo
+                                                    }
+                                                    jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).jobControlNo)
+                                                    else -> emptyList()
+                                                }
+                                                // Clear previous results in the grid
+                                                layoutProOrdNoResults.removeAllViews()
+                                                if (proOrdList.isNotEmpty()) {
+                                                    // Auto-click if only one result
+                                                    if (proOrdList.size == 1) {
+                                                        val singleJobControlNo = proOrdList.first()
+                                                        edtProOrdNo.setText(singleJobControlNo)
+                                                        edtProOrdNo.requestFocus()
+                                                        edtProOrdNo.clearFocus()
+                                                    } else {
+                                                        // Multiple results, show clickable boxes
+                                                        proOrdList.forEach { jobControlNo ->
+                                                            val tv = TextView(this@MachineLogActivity)
+                                                            tv.text = jobControlNo
+                                                            tv.setPadding(12, 8, 12, 8)
+                                                            tv.setBackgroundResource(R.drawable.clickable_button_background)
+                                                            tv.setTextColor(resources.getColor(android.R.color.white))
+                                                            tv.textSize = 14f
+                                                            tv.gravity = android.view.Gravity.CENTER
+
+                                                            val params = android.widget.GridLayout.LayoutParams()
+                                                            params.setMargins(4, 4, 4, 4)
+                                                            params.width = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                                                            params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                                                            tv.layoutParams = params
+
+                                                            tv.setOnClickListener {
+                                                                edtProOrdNo.setText(jobControlNo)
+                                                                edtProOrdNo.requestFocus()
+                                                                edtProOrdNo.clearFocus()
+                                                                val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                                                                imm?.hideSoftInputFromWindow(edtProOrdNo.windowToken, 0)
+                                                            }
+                                                            layoutProOrdNoResults.addView(tv)
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                // Handle error silently for auto-triggered fetch
+                                            }
+                                        }
+                                    }
                                 } else {
                                     txtMachineRunning.visibility = View.GONE
                                     layoutSmallEdits.visibility = View.GONE
+                                    // Re-enable editing when machine is not running
+                                    edtJobNo.isEnabled = true
                                 }
                             } else {
                                 txtProcessNo.text = ""
                                 txtMachineRunning.visibility = View.GONE
                                 layoutSmallEdits.visibility = View.GONE
+                                edtJobNo.isEnabled = true
                             }
                         } catch (e: Exception) {
                             txtProcessNo.text = ""
                             txtMachineRunning.visibility = View.GONE
                             layoutSmallEdits.visibility = View.GONE
+                            edtJobNo.isEnabled = true
                         }
                     }
                 } else {
@@ -296,6 +387,7 @@ class MachineLogActivity : AppCompatActivity() {
                     txtProcessNo.text = ""
                     txtMachineRunning.visibility = View.GONE
                     layoutSmallEdits.visibility = View.GONE
+                    edtJobNo.isEnabled = true
                 }
             }
         }
@@ -325,15 +417,18 @@ class MachineLogActivity : AppCompatActivity() {
                                 proOrdList.forEach { jobControlNo ->
                                     val tv = TextView(this@MachineLogActivity)
                                     tv.text = jobControlNo
-                                    tv.setPadding(24, 16, 24, 16)
-                                    tv.setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
-                                    tv.setTextColor(resources.getColor(android.R.color.black))
+                                    tv.setPadding(12, 8, 12, 8)
+                                    tv.setBackgroundResource(R.drawable.clickable_button_background)
+                                    tv.setTextColor(resources.getColor(android.R.color.white))
+                                    tv.textSize = 14f
+                                    tv.gravity = android.view.Gravity.CENTER
+
                                     val params = android.widget.GridLayout.LayoutParams()
-                                    params.setMargins(8, 8, 8, 8)
-                                    params.width = 0
+                                    params.setMargins(4, 4, 4, 4)
+                                    params.width = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
                                     params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
-                                    params.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
                                     tv.layoutParams = params
+
                                     // On click, copy result to LSX (ProOrdNo) input
                                     tv.setOnClickListener {
                                         edtProOrdNo.setText(jobControlNo)
@@ -439,20 +534,49 @@ class MachineLogActivity : AppCompatActivity() {
         btnSubmit.setOnClickListener {
             // Prevent submit if any error message is shown
             val invalidText = getString(R.string.invalid_staff)
+            val serverError = "Không kết nối được đến server"
             val errorFields = listOf(txtStaffInfo, txtMachineInfo, txtSerialInfo)
-            if (errorFields.any { it.text.toString().contains(invalidText, ignoreCase = true) }) {
+            if (errorFields.any {
+                val text = it.text.toString()
+                text.contains(invalidText, ignoreCase = true) || text.contains(serverError, ignoreCase = true)
+            }) {
                 Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
+            }
+
+            val processNoForDto = txtProcessNo.text.toString().let { if (it.isBlank()) " " else it }
+
+            // Check for duplicate submission within 4 hours
+            if (processNoForDto.trim().isNotEmpty() && processNoForDto.trim() != " ") {
+                val currentTime = System.currentTimeMillis()
+                val cacheKey = processNoForDto.trim()
+
+                // Clean up expired cache entries
+                val expiredKeys = submittedProcessCache.filter { (_, timestamp) ->
+                    currentTime - timestamp > CACHE_DURATION_HOURS * 60 * 60 * 1000
+                }.keys
+                expiredKeys.forEach { submittedProcessCache.remove(it) }
+
+                // Check if this processNo was submitted within 4 hours
+                val lastSubmissionTime = submittedProcessCache[cacheKey]
+                if (lastSubmissionTime != null) {
+                    val hoursAgo = (currentTime - lastSubmissionTime) / (60 * 60 * 1000)
+                    val errorMessage = "ProcessNo này đã được gửi ${hoursAgo}h trước. Vui lòng chờ ${CACHE_DURATION_HOURS - hoursAgo}h nữa."
+                    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+                    txtSendStatus.visibility = View.VISIBLE
+                    txtSendStatus.text = errorMessage
+                    txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                    return@setOnClickListener
+                }
             }
 
             // Show immediate feedback and disable button
             Toast.makeText(this, "Dữ liệu đã được gửi", Toast.LENGTH_SHORT).show()
             btnSubmit.isEnabled = false
             txtSendStatus.visibility = View.VISIBLE
-            txtSendStatus.text = "Đang gửi..."
+            txtSendStatus.text = "Đang xử lý..."
             txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
 
-            val processNoForDto = txtProcessNo.text.toString().let { if (it.isBlank()) " " else it }
             val dto = NhatKyGiaCongDto(
                 processNo = processNoForDto,
                 jobControlNo = edtJobNo.text.toString().trim(),
@@ -472,19 +596,24 @@ class MachineLogActivity : AppCompatActivity() {
                     android.util.Log.d("POST_DTO", Gson().toJson(dto)) // Log the payload
                     val response = postApi.postLog(dto)
                     if (response.isSuccessful) {
-                        Toast.makeText(this@MachineLogActivity, "Gửi thành công", Toast.LENGTH_SHORT).show()
-                        txtSendStatus.text = "Gửi thành công"
+                        // Cache the successful submission
+                        if (processNoForDto.trim().isNotEmpty() && processNoForDto.trim() != " ") {
+                            submittedProcessCache[processNoForDto.trim()] = System.currentTimeMillis()
+                        }
+
+                        Toast.makeText(this@MachineLogActivity, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
+                        txtSendStatus.text = "Cập nhật thành công"
                         txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
                     } else {
                         val errorBody = response.errorBody()?.string()
-                        val errorMessage = "Gửi thất bại ${response.code()} ${errorBody ?: ""}"
+                        val errorMessage = "Cập nhật thất bại ${response.code()} ${errorBody ?: ""}"
                         Toast.makeText(this@MachineLogActivity, errorMessage, Toast.LENGTH_LONG).show()
                         txtSendStatus.text = errorMessage
                         txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                         android.util.Log.e("POST_ERROR", "Code: ${response.code()} Body: $errorBody")
                     }
                 } catch (e: Exception) {
-                    val errorMessage = "Lỗi gửi: ${e.message}"
+                    val errorMessage = "Cập nhật thất bại: ${e.message}"
                     Toast.makeText(this@MachineLogActivity, errorMessage, Toast.LENGTH_SHORT).show()
                     txtSendStatus.text = errorMessage
                     txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))

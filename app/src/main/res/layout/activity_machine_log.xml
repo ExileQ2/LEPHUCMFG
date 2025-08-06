@@ -46,7 +46,7 @@
             android:hint="Mã máy"
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
-            android:inputType="text" />
+            android:inputType="number" />
 
         <TextView
             android:id="@+id/txtMachineInfo"
@@ -87,7 +87,7 @@
             android:hint="Chi tiết công việc"
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
-            android:inputType="text" />
+            android:inputType="number" />
 
         <!-- Replacing LinearLayout with GridLayout for 3 columns per row -->
         <GridLayout
@@ -105,7 +105,7 @@
             android:hint="Lệnh sản xuất"
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
-            android:inputType="text" />
+            android:inputType="number" />
 
         <!-- Serial info result for LSX (ProOrdNo) -->
         <TextView
