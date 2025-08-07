@@ -1,0 +1,18 @@
+CHANGELOG:
+LEPHUCMFG v1.2.2
+- Tự động cập nhật Chi tiết công việc, LSX, Series, Ghi chú khi thoát máy.
+- Tự bôi đen Chi tiết công việc và LSX khi thoát máy.
+- Cho phép thay đổi Ghi chú và Series khi thoát máy.
+LEPHUCMFG v1.2.1
+- Tự động thêm LSX khi nhập nhật ký máy.
+- Đổi màu các giá trị trong nhật ký máy.
+- Thêm tính năng chờ tải khi nhập dữ liệu.
+LEPHUCMFG v1.2.0
+- Sửa lỗi không hiển thị được thông báo khi nhập sai.
+- Thêm tính năng chống nhập sai hoặc nhập liên tiếp.
+LEPHUCMFG v1.1.9
+- Thêm nút bấm LSX sau khi nhập Chi tiết công việc.
+- Thêm scan QR ở tất cả chức năng.
+LEPHUCMFG v1.1.8
+- Chuyển kết nối sang server nội bộ công ty.
+LEPHUCMFG v1.1.7 - v1.1.1. Cập nhật dần sau khi test.
