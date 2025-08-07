@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
+import com.example.lephucmfg.utils.LoadingStates
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.launch
 import okhttp3.ResponseBody
@@ -75,7 +76,10 @@ class MachineLogActivity : AppCompatActivity() {
         suspend fun getProcessNo(@Path("StaffNo") staffNo: String, @Path("McName") mcName: String): ProcessNoDto
     }
     data class ProcessNoDto(
-        @SerializedName("processNo") val processNo: String?
+        @SerializedName("processNo") val processNo: String?,
+        @SerializedName("note") val note: String?,
+        @SerializedName("serial2") val serial2: String?,
+        @SerializedName("proOrdNo2") val proOrdNo2: String?
     )
     // --- API interface for posting machine log ---
     interface PostNhatKyGiaCongApi {
@@ -119,6 +123,9 @@ class MachineLogActivity : AppCompatActivity() {
         // --- UI reference for serial info below LSX (ProOrdNo) ---
         val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
         val txtSerialInfo = findViewById<TextView>(R.id.txtSerialInfo)
+        val txtJobInfo = findViewById<TextView>(R.id.txtJobInfo)
+        val txtSerialStatus = findViewById<TextView>(R.id.txtSerialStatus)
+        val txtNoteStatus = findViewById<TextView>(R.id.txtNoteStatus)
         val machineApi = RetrofitClient.retrofitPublic.create(MachineApi::class.java)
         val serialApi = RetrofitClient.retrofitPublic.create(SerialApi::class.java)
         val proOrdApi = RetrofitClient.retrofitPublic.create(ProOrdApi::class.java)
@@ -221,32 +228,33 @@ class MachineLogActivity : AppCompatActivity() {
                 if (staffNoStr.isNotEmpty()) {
                     try {
                         val staffNo = staffNoStr.toInt()
-                        // Show loading indicator
-                        txtStaffInfo.text = "Đang tải..."
-                        txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+                        // Show loading indicator using LoadingStates
+                        txtStaffInfo.text = LoadingStates.LOADING
+                        txtStaffInfo.setTextColor(LoadingStates.getLoadingColor(resources))
 
                         // Fetch staff info asynchronously
                         lifecycleScope.launch {
                             try {
                                 val info = api.getStaff(staffNo)
                                 if (info != null) {
-                                    // Display staff info if found
+                                    // Display staff info if found - dark red color for valid and bold
                                     txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
                                     txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                    //txtStaffInfo.setTypeface(null, android.graphics.Typeface.BOLD)  // Uncomment to make bold
                                 } else {
-                                    // Show error if staff not found
-                                    txtStaffInfo.text = "Không hợp lệ"
+                                    // Show error if staff not found - API responded but returned null (invalid)
+                                    txtStaffInfo.text = "Không lấy được dữ liệu"
                                     txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                                 }
                             } catch (e: Exception) {
                                 // Show server connection error if API call fails
-                                txtStaffInfo.text = "Không kết nối được đến server"
+                                txtStaffInfo.text = "Không lấy được dữ liệu"
                                 txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             }
                         }
                     } catch (e: NumberFormatException) {
                         // Show error if input is not a number
-                        txtStaffInfo.text = "Không hợp lệ"
+                        txtStaffInfo.text = "Không lấy được dữ liệu"
                         txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                     }
                 } else {
@@ -255,14 +263,15 @@ class MachineLogActivity : AppCompatActivity() {
                 }
             }
         }
+
         // --- Block for handling Machine Code ("Mã máy") input and validation ---
         edtMcName.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val mcName = edtMcName.text.toString().trim()
                 if (mcName.isNotEmpty()) {
-                    // Show loading indicator
-                    txtMachineInfo.text = "Đang tải..."
-                    txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+                    // Show loading indicator using LoadingStates
+                    txtMachineInfo.text = LoadingStates.LOADING
+                    txtMachineInfo.setTextColor(LoadingStates.getLoadingColor(resources))
 
                     // Launch coroutine to fetch machine info asynchronously
                     lifecycleScope.launch {
@@ -270,21 +279,23 @@ class MachineLogActivity : AppCompatActivity() {
                         try {
                             val info = machineApi.getMachine(mcName)
                             if (info != null) {
-                                // Display machine model and status if found
+                                // Display machine model and status if found - blue color for valid and bold
                                 txtMachineInfo.text = listOfNotNull(info.model, info.status).joinToString(", ")
-                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+                                //txtMachineInfo.setTypeface(null, android.graphics.Typeface.BOLD)  // Uncomment to make bold
                                 machineModel = info.model
                             } else {
-                                // Show error if machine not found
-                                txtMachineInfo.text = "Không hợp lệ"
+                                // Show error if machine not found - API responded but returned null (invalid)
+                                txtMachineInfo.text = "Không lấy được dữ liệu"
                                 txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             }
                         } catch (e: Exception) {
                             // Show server connection error if API call fails
-                            txtMachineInfo.text = "Không kết nối được đến server"
+                            txtMachineInfo.text = "Không lấy được dữ liệu"
                             txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                         }
-                        // Fetch ProcessNo and display under Model/Status
+
+                        // Fetch ProcessNo and additional data
                         try {
                             val staffNo = edtStaffNo.text.toString().trim()
                             if (staffNo.isNotEmpty()) {
@@ -296,90 +307,72 @@ class MachineLogActivity : AppCompatActivity() {
                                 // Show/hide machine running status based on processNo
                                 if (!processNoValue.isNullOrBlank()) {
                                     txtMachineRunning.visibility = View.VISIBLE
+                                    txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_green_dark))
                                     layoutSmallEdits.visibility = View.VISIBLE
 
-                                    // When "Máy đang chạy" appear
-                                    // Auto-fill "Chi tiết công việc" with machine model and disable editing
+                                    //when "Máy đang chạy" appear
+                                    // Auto-fill fields with data from processNoDto
+
+                                    // 1. Auto-fill "Chi tiết công việc" with machine model and disable editing
                                     if (!machineModel.isNullOrBlank()) {
                                         edtJobNo.setText(machineModel)
                                         edtJobNo.isEnabled = false
-                                        edtJobNo.clearFocus()
-                                        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-                                        imm?.hideSoftInputFromWindow(edtJobNo.windowToken, 0)
-
-                                        // Trigger ProOrdNo fetch for the auto-filled job number
-                                        lifecycleScope.launch {
-                                            try {
-                                                val responseBody = proOrdApi.getProOrd(machineModel)
-                                                val json = responseBody.string()
-                                                val gson = Gson()
-                                                val jsonElement = JsonParser.parseString(json)
-                                                val proOrdList = when {
-                                                    jsonElement.isJsonArray -> jsonElement.asJsonArray.mapNotNull {
-                                                        gson.fromJson(it, ProOrdDto::class.java).jobControlNo
-                                                    }
-                                                    jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).jobControlNo)
-                                                    else -> emptyList()
-                                                }
-                                                // Clear previous results in the grid
-                                                layoutProOrdNoResults.removeAllViews()
-                                                if (proOrdList.isNotEmpty()) {
-                                                    // Auto-click if only one result
-                                                    if (proOrdList.size == 1) {
-                                                        val singleJobControlNo = proOrdList.first()
-                                                        edtProOrdNo.setText(singleJobControlNo)
-                                                        edtProOrdNo.requestFocus()
-                                                        edtProOrdNo.clearFocus()
-                                                    } else {
-                                                        // Multiple results, show clickable boxes
-                                                        proOrdList.forEach { jobControlNo ->
-                                                            val tv = TextView(this@MachineLogActivity)
-                                                            tv.text = jobControlNo
-                                                            tv.setPadding(12, 8, 12, 8)
-                                                            tv.setBackgroundResource(R.drawable.clickable_button_background)
-                                                            tv.setTextColor(resources.getColor(android.R.color.white))
-                                                            tv.textSize = 14f
-                                                            tv.gravity = android.view.Gravity.CENTER
-
-                                                            val params = android.widget.GridLayout.LayoutParams()
-                                                            params.setMargins(4, 4, 4, 4)
-                                                            params.width = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
-                                                            params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
-                                                            tv.layoutParams = params
-
-                                                            tv.setOnClickListener {
-                                                                edtProOrdNo.setText(jobControlNo)
-                                                                edtProOrdNo.requestFocus()
-                                                                edtProOrdNo.clearFocus()
-                                                                val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-                                                                imm?.hideSoftInputFromWindow(edtProOrdNo.windowToken, 0)
-                                                            }
-                                                            layoutProOrdNoResults.addView(tv)
-                                                        }
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                // Handle error silently for auto-triggered fetch
-                                            }
-                                        }
+                                        // Don't trigger focus/unfocus to avoid showing button boxes
                                     }
+
+                                    // 2. Auto-fill "Lệnh sản xuất" with ProOrdNo2 and disable editing
+                                    if (!processNoDto.proOrdNo2.isNullOrBlank()) {
+                                        edtProOrdNo.setText(processNoDto.proOrdNo2)
+                                        // Trigger focus/unfocus to activate serial textview before disabling
+                                        edtProOrdNo.requestFocus()
+                                        edtProOrdNo.clearFocus()
+                                        edtProOrdNo.isEnabled = false
+                                    }
+
+                                    // 3. Auto-fill "Số series" with Serial2 but allow editing
+                                    if (!processNoDto.serial2.isNullOrBlank()) {
+                                        edtSerial.setText(processNoDto.serial2)
+                                        edtSerial.isEnabled = true
+                                    }
+
+                                    // 4. Auto-fill "Ghi chú" with Note but allow editing
+                                    if (!processNoDto.note.isNullOrBlank()) {
+                                        edtGhiChu.setText(processNoDto.note)
+                                        edtGhiChu.isEnabled = true
+                                    }
+
+                                    // Hide keyboard and clear any remaining focus
+                                    val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                                    imm?.hideSoftInputFromWindow(edtGhiChu.windowToken, 0)
+                                    // Always hide button boxes when machine is running
+                                    layoutProOrdNoResults.removeAllViews()
+
                                 } else {
                                     txtMachineRunning.visibility = View.GONE
                                     layoutSmallEdits.visibility = View.GONE
                                     // Re-enable editing when machine is not running
                                     edtJobNo.isEnabled = true
+                                    edtProOrdNo.isEnabled = true
+                                    edtSerial.isEnabled = true
+                                    edtGhiChu.isEnabled = true
                                 }
                             } else {
                                 txtProcessNo.text = ""
                                 txtMachineRunning.visibility = View.GONE
                                 layoutSmallEdits.visibility = View.GONE
                                 edtJobNo.isEnabled = true
+                                edtProOrdNo.isEnabled = true
+                                edtSerial.isEnabled = true
+                                edtGhiChu.isEnabled = true
                             }
                         } catch (e: Exception) {
                             txtProcessNo.text = ""
                             txtMachineRunning.visibility = View.GONE
                             layoutSmallEdits.visibility = View.GONE
                             edtJobNo.isEnabled = true
+                            edtProOrdNo.isEnabled = true
+                            edtSerial.isEnabled = true
+                            edtGhiChu.isEnabled = true
                         }
                     }
                 } else {
@@ -388,14 +381,24 @@ class MachineLogActivity : AppCompatActivity() {
                     txtMachineRunning.visibility = View.GONE
                     layoutSmallEdits.visibility = View.GONE
                     edtJobNo.isEnabled = true
+                    edtProOrdNo.isEnabled = true
+                    edtSerial.isEnabled = true
+                    edtGhiChu.isEnabled = true
                 }
             }
         }
+
         // --- Block for handling LSX (ProOrdNo) input and displaying results in a grid ---
+        // Goal 2: Move the auto-click logic here when processNo is blank
         edtJobNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val jobNo = edtJobNo.text.toString().trim()
                 if (jobNo.isNotEmpty()) {
+                    // Show loading indicator
+                    txtJobInfo.visibility = View.VISIBLE
+                    txtJobInfo.text = LoadingStates.LOADING
+                    txtJobInfo.setTextColor(LoadingStates.getLoadingColor(resources))
+
                     // Fetch production order list asynchronously
                     lifecycleScope.launch {
                         try {
@@ -410,58 +413,84 @@ class MachineLogActivity : AppCompatActivity() {
                                 jsonElement.isJsonObject -> listOfNotNull(gson.fromJson(jsonElement, ProOrdDto::class.java).jobControlNo)
                                 else -> emptyList()
                             }
+
+                            // Hide loading indicator
+                            txtJobInfo.visibility = View.GONE
+
                             // Clear previous results in the grid
                             layoutProOrdNoResults.removeAllViews()
+
+                            // Check if machine is running first - if so, don't show any buttons
+                            val currentProcessNo = txtProcessNo.text.toString().trim()
+                            val isMachineRunning = !currentProcessNo.isBlank()
+
+                            if (isMachineRunning) {
+                                // Machine is running - don't show any buttons, just clear and return
+                                return@launch
+                            }
+
                             if (proOrdList.isNotEmpty()) {
-                                // For each result, create a clickable TextView and add to grid
-                                proOrdList.forEach { jobControlNo ->
-                                    val tv = TextView(this@MachineLogActivity)
-                                    tv.text = jobControlNo
-                                    tv.setPadding(12, 8, 12, 8)
-                                    tv.setBackgroundResource(R.drawable.clickable_button_background)
-                                    tv.setTextColor(resources.getColor(android.R.color.white))
-                                    tv.textSize = 14f
-                                    tv.gravity = android.view.Gravity.CENTER
+                                // Check if machine is NOT running (processNo is blank)
+                                val shouldAutoClick = currentProcessNo.isBlank()
 
-                                    val params = android.widget.GridLayout.LayoutParams()
-                                    params.setMargins(4, 4, 4, 4)
-                                    params.width = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
-                                    params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
-                                    tv.layoutParams = params
+                                // Auto-click if only one result and machine is not running
+                                if (proOrdList.size == 1 && shouldAutoClick) {
+                                    val singleJobControlNo = proOrdList.first()
+                                    edtProOrdNo.setText(singleJobControlNo)
+                                    edtProOrdNo.requestFocus()
+                                    edtProOrdNo.clearFocus()
+                                } else {
+                                    // Multiple results or machine is running, show clickable boxes
+                                    proOrdList.forEach { jobControlNo ->
+                                        val tv = TextView(this@MachineLogActivity)
+                                        tv.text = jobControlNo
+                                        tv.setPadding(12, 8, 12, 8)
+                                        tv.setBackgroundResource(R.drawable.clickable_button_background)
+                                        tv.setTextColor(resources.getColor(android.R.color.white))
+                                        tv.textSize = 14f
+                                        tv.gravity = android.view.Gravity.CENTER
 
-                                    // On click, copy result to LSX (ProOrdNo) input
-                                    tv.setOnClickListener {
-                                        edtProOrdNo.setText(jobControlNo)
-                                        // Quick fix: focus, unfocus, then hide keyboard to trigger value output
-                                        edtProOrdNo.requestFocus()
-                                        edtProOrdNo.clearFocus()
-                                        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-                                        imm?.hideSoftInputFromWindow(edtProOrdNo.windowToken, 0)
+                                        val params = android.widget.GridLayout.LayoutParams()
+                                        params.setMargins(4, 4, 4, 4)
+                                        params.width = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                                        params.height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                                        tv.layoutParams = params
+
+                                        tv.setOnClickListener {
+                                            edtProOrdNo.setText(jobControlNo)
+                                            edtProOrdNo.requestFocus()
+                                            edtProOrdNo.clearFocus()
+                                            val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                                            imm?.hideSoftInputFromWindow(edtProOrdNo.windowToken, 0)
+                                        }
+                                        layoutProOrdNoResults.addView(tv)
                                     }
-                                    layoutProOrdNoResults.addView(tv)
                                 }
                             } else {
                                 // Show error if no results found
                                 val tv = TextView(this@MachineLogActivity)
-                                tv.text = getString(R.string.invalid_staff)
+                                tv.text = "Không lấy được dữ liệu"
                                 tv.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                                 layoutProOrdNoResults.addView(tv)
                             }
                         } catch (e: Exception) {
-                            // Show error if API call fails
+                            // Hide loading and show error if API call fails
+                            txtJobInfo.visibility = View.GONE
                             layoutProOrdNoResults.removeAllViews()
                             val tv = TextView(this@MachineLogActivity)
-                            tv.text = getString(R.string.invalid_staff)
+                            tv.text = "Không lấy được dữ liệu"
                             tv.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             layoutProOrdNoResults.addView(tv)
                         }
                     }
                 } else {
-                    // Clear grid if input is empty
+                    // Clear grid and hide loading if input is empty
                     layoutProOrdNoResults.removeAllViews()
+                    txtJobInfo.visibility = View.GONE
                 }
             }
         }
+
         // --- Block for handling LSX (ProOrdNo) serial info fetching ---
         edtProOrdNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
@@ -473,10 +502,10 @@ class MachineLogActivity : AppCompatActivity() {
                             if (serialList.isNotEmpty()) {
                                 txtSerialInfo.text = serialList.joinToString(", ") { it.serial ?: "" }
                             } else {
-                                txtSerialInfo.text = getString(R.string.invalid_staff)
+                                txtSerialInfo.text = "Không lấy được dữ liệu"
                             }
                         } catch (e: Exception) {
-                            txtSerialInfo.text = getString(R.string.invalid_staff)
+                            txtSerialInfo.text = "Không lấy được dữ liệu"
                         }
                     }
                 } else {
@@ -533,12 +562,12 @@ class MachineLogActivity : AppCompatActivity() {
         val postApi = RetrofitClient.retrofitPublic.create(PostNhatKyGiaCongApi::class.java)
         btnSubmit.setOnClickListener {
             // Prevent submit if any error message is shown
-            val invalidText = getString(R.string.invalid_staff)
-            val serverError = "Không kết nối được đến server"
+            val dataError = "Không lấy được dữ liệu"
+            val serverError = "Không lấy được dữ liệu"
             val errorFields = listOf(txtStaffInfo, txtMachineInfo, txtSerialInfo)
             if (errorFields.any {
                 val text = it.text.toString()
-                text.contains(invalidText, ignoreCase = true) || text.contains(serverError, ignoreCase = true)
+                text.contains(dataError, ignoreCase = true) || text.contains(serverError, ignoreCase = true)
             }) {
                 Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener

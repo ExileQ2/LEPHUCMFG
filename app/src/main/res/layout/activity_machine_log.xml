@@ -89,6 +89,14 @@
             android:imeOptions="actionNext"
             android:inputType="number" />
 
+        <TextView
+            android:id="@+id/txtJobInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
         <!-- Replacing LinearLayout with GridLayout for 3 columns per row -->
         <GridLayout
             android:id="@+id/layoutProOrdNoResults"
@@ -107,7 +115,6 @@
             android:imeOptions="actionNext"
             android:inputType="number" />
 
-        <!-- Serial info result for LSX (ProOrdNo) -->
         <TextView
             android:id="@+id/txtSerialInfo"
             android:layout_width="match_parent"
@@ -124,6 +131,14 @@
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
             android:inputType="text" />
+
+        <TextView
+            android:id="@+id/txtSerialStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <!-- Only two checkboxes: Rework and Setup, can be checked independently -->
         <LinearLayout
@@ -194,6 +209,14 @@
             android:layout_marginTop="16dp"
             android:inputType="text"
             android:imeOptions="actionDone"/>
+
+        <TextView
+            android:id="@+id/txtNoteStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <!-- Status TextView for showing send status -->
         <TextView

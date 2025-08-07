@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
+    <!-- Hidden test button for debugging - freely positioned -->
     <Button
         android:id="@+id/btnAbTesting"
         android:layout_width="48dp"
@@ -16,16 +17,65 @@
         android:layout_marginStart="8dp"
         android:layout_marginBottom="8dp" />
 
+    <!-- Main Machine Log button - freely positioned with margins -->
+
+    <!-- Changelog box - Freely positioned and resizable -->
+
     <Button
         android:id="@+id/btnMachineLog"
         android:layout_width="144dp"
         android:layout_height="86dp"
-        android:layout_alignBottom="@+id/btnAbTesting"
-        android:layout_marginEnd="-164dp"
-        android:layout_marginBottom="569dp"
-        android:layout_toStartOf="@+id/btnAbTesting"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="28dp"
         android:text="Nhật ký máy" />
 
-    <!-- Add more buttons and use layout_alignParent*, layout_center*, layout_below, layout_above, etc. to freely anchor and move them in the design view -->
+    <ScrollView
+        android:id="@+id/scrollChangeLog"
+        android:layout_width="207dp"
+        android:layout_height="129dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="530dp"
+        android:layout_marginEnd="-2dp"
+        android:background="@android:drawable/edit_text"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/txtChangeLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Loading changelog..."
+            android:textColor="@android:color/black"
+            android:textSize="11sp" />
+    </ScrollView>
+
+    <!-- Example of how to add more freely positioned elements:
+
+    <Button
+        android:id="@+id/btnExample1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="Center Button" />
+
+    <Button
+        android:id="@+id/btnExample2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="100dp"
+        android:text="Bottom Center" />
+
+    Use these attributes for free positioning:
+    - layout_alignParentTop/Bottom/Start/End="true"
+    - layout_centerHorizontal/Vertical="true"
+    - layout_centerInParent="true"
+    - layout_above/below/toStartOf/toEndOf="@id/other_view"
+    - layout_marginTop/Bottom/Start/End="XXdp"
+    -->
 
 </RelativeLayout>
