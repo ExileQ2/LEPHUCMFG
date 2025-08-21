@@ -21,7 +21,7 @@ class ScanHelper(
     private val scanButton: View
 ) {
     // Order of fields for focus movement
-    private val fieldOrder = listOf("edtStaffNo", "edtMcName", "edtJobNo", "edtProOrdNo", "edtSerial")
+    private val fieldOrder = listOf("edtStaffNo", "edtMcName", "edtJobNo", "edtProOrdNo", "edtSerial", "edtHeatNo")
 
     init {
         scanButton.setOnClickListener {
@@ -29,9 +29,10 @@ class ScanHelper(
             if (editFields.values.none { it.hasFocus() }) {
                 fieldOrder.mapNotNull { editFields[it] }.firstOrNull()?.requestFocus()
             }
-            val integrator = IntentIntegrator(activity)
-            integrator.setOrientationLocked(false)
-            scanLauncher.launch(integrator.createScanIntent())
+            //note// Launch custom scanner instead of default ZXing scanner
+            //note// This provides fixed viewfinder overlay and gallery selection
+            val intent = Intent(activity, CustomScanActivity::class.java)
+            scanLauncher.launch(intent)
         }
     }
 

@@ -53,8 +53,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation(libs.material3)
 
-
-
     // Debug + Test
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -62,6 +60,17 @@ dependencies {
 
     // ZXing QR Scanner
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    //note// Camera and ML Kit dependencies for custom scanner with fixed viewfinder
+    //note// Updated to latest versions with 16KB alignment support
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    //note// Explicitly include ML Kit common library with 16KB alignment
+    implementation("com.google.mlkit:vision-common:17.3.0")
 
     // Core AndroidX
     implementation("androidx.core:core-ktx:1.12.0")

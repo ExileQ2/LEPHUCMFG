@@ -3,4 +3,6 @@
     <string name="scan_qr">Scan QR</string>
     <string name="result_will_show_here">kết quả</string>
     <string name="invalid_staff">không hợp lệ</string>
+    <string name="loading">Đang tải...</string>
+    <string name="data_not_found">Không lấy được dữ liệu</string>
 </resources>

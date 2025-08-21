@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnScan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scan"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/edtStaffNo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Thợ"
+            android:layout_marginTop="0dp"
+            android:imeOptions="actionNext"
+            android:inputType="number" />
+
+        <TextView
+            android:id="@+id/txtStaffInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/edtHeatNo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="HeatNo"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
+
+        <TextView
+            android:id="@+id/txtHeatInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="8dp" />
+
+        <!-- ...other UI elements... -->
+
+    </LinearLayout>
+</ScrollView>

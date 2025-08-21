@@ -24,6 +24,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnMachineLog).setOnClickListener {
             startActivity(Intent(this, MachineLogActivity::class.java))
         }
+        findViewById<Button>(R.id.btnMaterialLog).setOnClickListener {
+            startActivity(Intent(this, MaterialLogActivity::class.java))
+        }
     }
 
     private fun loadChangelogFromAssets(textView: TextView) {

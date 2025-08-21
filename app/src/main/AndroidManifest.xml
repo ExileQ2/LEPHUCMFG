@@ -37,6 +37,13 @@
             android:name=".ABTestingActivity"
             android:exported="false"/>
         <activity android:name=".MachineLogActivity" />
+        <activity android:name=".MaterialLogActivity" android:exported="false" />
+
+        <!-- note: Custom scan activity with fixed viewfinder overlay and gallery support -->
+        <activity
+            android:name=".CustomScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
     </application>
 
