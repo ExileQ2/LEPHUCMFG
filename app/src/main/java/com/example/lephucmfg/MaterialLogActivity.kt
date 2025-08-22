@@ -57,6 +57,17 @@ class MaterialLogActivity : AppCompatActivity() {
         val txtHeatInfo = findViewById<TextView>(R.id.txtHeatInfo)
         val btnScan = findViewById<Button>(R.id.btnScan)
         val layoutHeatInfoButtons = findViewById<LinearLayout>(R.id.layoutHeatInfoButtons)
+        val txtSelectedMaterial = findViewById<TextView>(R.id.txtSelectedMaterial)
+        val edtJobNo = findViewById<EditText>(R.id.edtJobNo)
+        val edtSize1 = findViewById<EditText>(R.id.edtSize1)
+        val txtOldSize1 = findViewById<TextView>(R.id.txtOldSize1)
+        val edtSize2 = findViewById<EditText>(R.id.edtSize2)
+        val txtOldSize2 = findViewById<TextView>(R.id.txtOldSize2)
+        val edtMaterialQty = findViewById<EditText>(R.id.edtMaterialQty)
+        val txtOldMaterialQty = findViewById<TextView>(R.id.txtOldMaterialQty)
+        val edtProductQty = findViewById<EditText>(R.id.edtProductQty)
+        val edtWarehouseArea = findViewById<EditText>(R.id.edtWarehouseArea)
+        val btnXuatHang = findViewById<Button>(R.id.btnXuatHang)
 
         val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
         val heatNoApi = RetrofitClient.retrofitPublic.create(HeatNoApi::class.java)
@@ -155,7 +166,39 @@ class MaterialLogActivity : AppCompatActivity() {
                                         }
 
                                         setOnClickListener {
-                                            // Button click handler - no action for now
+                                            // Show selected material in the TextView
+                                            txtSelectedMaterial.text = "Tên vật liệu: $material"
+                                            txtSelectedMaterial.visibility = android.view.View.VISIBLE
+                                            txtSelectedMaterial.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
+
+                                            // Show job details field
+                                            edtJobNo.visibility = android.view.View.VISIBLE
+
+                                            // Show size fields and old values
+                                            edtSize1.visibility = android.view.View.VISIBLE
+                                            txtOldSize1.text = "cũ: $inpSize1"
+                                            txtOldSize1.visibility = android.view.View.VISIBLE
+                                            txtOldSize1.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
+
+                                            edtSize2.visibility = android.view.View.VISIBLE
+                                            txtOldSize2.text = "cũ: $inpSize2"
+                                            txtOldSize2.visibility = android.view.View.VISIBLE
+                                            txtOldSize2.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
+
+                                            // New fields for quantity and warehouse area
+                                            edtMaterialQty.visibility = android.view.View.VISIBLE
+                                            txtOldMaterialQty.text = "cũ: $existQty"
+                                            txtOldMaterialQty.visibility = android.view.View.VISIBLE
+                                            txtOldMaterialQty.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
+
+                                            edtProductQty.visibility = android.view.View.VISIBLE
+                                            edtProductQty.setText(qty)
+
+                                            edtWarehouseArea.visibility = android.view.View.VISIBLE
+                                            edtWarehouseArea.setText(notes)
+
+                                            // Show the "Xuất hàng" button
+                                            btnXuatHang.visibility = android.view.View.VISIBLE
                                         }
                                     }
 

@@ -8,12 +8,38 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <Button
-            android:id="@+id/btnScan"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Scan"
-            android:layout_marginBottom="8dp" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnScan"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Scan"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnNhapHang"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Nhập hàng"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnXuatHangTop"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Xuất hàng"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
 
         <EditText
             android:id="@+id/edtStaffNo"
@@ -55,6 +81,117 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/txtSelectedMaterial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="8dp"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtJobNo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Chi tiết công việc"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtSize1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Kích thước 1"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/txtOldSize1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtSize2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Kích thước 2"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/txtOldSize2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtMaterialQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng vật liệu"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/txtOldMaterialQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtProductQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng con hàng"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtWarehouseArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Khu vực kho"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnXuatHang"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cập nhật"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/clickable_button_background"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:visibility="gone" />
 
         <!-- ...other UI elements... -->
 
