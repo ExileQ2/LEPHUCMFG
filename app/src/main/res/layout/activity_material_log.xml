@@ -49,6 +49,13 @@
             android:textColor="@android:color/holo_red_dark"
             android:layout_marginTop="8dp" />
 
+        <LinearLayout
+            android:id="@+id/layoutHeatInfoButtons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
+
         <!-- ...other UI elements... -->
 
     </LinearLayout>

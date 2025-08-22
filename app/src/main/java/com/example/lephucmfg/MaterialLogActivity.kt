@@ -3,6 +3,7 @@ package com.example.lephucmfg
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -55,6 +56,7 @@ class MaterialLogActivity : AppCompatActivity() {
         val edtHeatNo = findViewById<EditText>(R.id.edtHeatNo)
         val txtHeatInfo = findViewById<TextView>(R.id.txtHeatInfo)
         val btnScan = findViewById<Button>(R.id.btnScan)
+        val layoutHeatInfoButtons = findViewById<LinearLayout>(R.id.layoutHeatInfoButtons)
 
         val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
         val heatNoApi = RetrofitClient.retrofitPublic.create(HeatNoApi::class.java)
@@ -118,6 +120,9 @@ class MaterialLogActivity : AppCompatActivity() {
         edtHeatNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val heatNoStr = edtHeatNo.text.toString().trim()
+                // Clear previous buttons
+                layoutHeatInfoButtons.removeAllViews()
+
                 if (heatNoStr.isNotEmpty()) {
                     txtHeatInfo.text = getString(R.string.loading)
                     txtHeatInfo.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
@@ -125,17 +130,37 @@ class MaterialLogActivity : AppCompatActivity() {
                         try {
                             val heatInfoList = heatNoApi.getHeatNoInfo(heatNoStr)
                             if (heatInfoList != null && heatInfoList.isNotEmpty()) {
-                                val formattedInfo = heatInfoList.joinToString("\n") { info ->
+                                txtHeatInfo.text = ""
+
+                                // Create clickable buttons for each heat info item
+                                heatInfoList.forEach { info ->
                                     val material = info.material ?: ""
                                     val existQty = info.existQty?.toString() ?: ""
                                     val inpSize1 = info.inpSize1 ?: ""
                                     val inpSize2 = info.inpSize2 ?: ""
                                     val qty = info.qty?.toString() ?: ""
                                     val notes = info.notes ?: ""
-                                    "$material, SL vật liệu $existQty, $inpSize1 * $inpSize2, SL con hàng $qty, $notes"
+
+                                    val buttonText = "$material, SL vật liệu $existQty, $inpSize1 * $inpSize2, SL con hàng $qty, $notes"
+
+                                    val button = Button(this@MaterialLogActivity).apply {
+                                        text = buttonText
+                                        setBackgroundResource(R.drawable.clickable_button_background)
+                                        setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                                        layoutParams = LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT
+                                        ).apply {
+                                            setMargins(0, 0, 0, 8)
+                                        }
+
+                                        setOnClickListener {
+                                            // Button click handler - no action for now
+                                        }
+                                    }
+
+                                    layoutHeatInfoButtons.addView(button)
                                 }
-                                txtHeatInfo.text = formattedInfo
-                                txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
                             } else {
                                 txtHeatInfo.text = getString(R.string.data_not_found)
                                 txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))

@@ -24,7 +24,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="32dp"
-        android:text="Select from Gallery"
+        android:text="Chọn ảnh từ thư viện"
         android:background="@android:color/white"
         android:textColor="@android:color/black"
         android:padding="12dp" />
