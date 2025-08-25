@@ -27,7 +27,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Nhập hàng"
+                android:text="Nhập phôi"
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp" />
 
@@ -36,7 +36,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Xuất hàng"
+                android:text="Xuất phôi"
                 android:layout_marginStart="4dp" />
 
         </LinearLayout>
@@ -92,14 +92,114 @@
             android:textSize="16sp"
             android:visibility="gone" />
 
-        <EditText
-            android:id="@+id/edtJobNo"
+        <!-- Material Type Selection Buttons -->
+        <LinearLayout
+            android:id="@+id/layoutMaterialTypeButtons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Chi tiết công việc"
+            android:orientation="horizontal"
             android:layout_marginTop="16dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnTam"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="TẤM"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnCay"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CÂY"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnOng"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="ỐNG"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- Size A Label and Input -->
+        <TextView
+            android:id="@+id/txtSizeALabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Size A Label"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtSizeA"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Size A"
+            android:layout_marginTop="8dp"
             android:imeOptions="actionNext"
             android:inputType="text"
+            android:visibility="gone" />
+
+        <!-- Size B Label and Input -->
+        <TextView
+            android:id="@+id/txtSizeBLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Size B Label"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtSizeB"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Size B"
+            android:layout_marginTop="8dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <!-- Size C Label and Input -->
+        <TextView
+            android:id="@+id/txtSizeCLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Size C Label"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtSizeC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Size C"
+            android:layout_marginTop="8dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:visibility="gone" />
+
+        <!-- Original Size 1 Label and Input (for existing functionality) -->
+        <TextView
+            android:id="@+id/txtSize1Label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nhập kích thước 1 (rộng/ OD/ dầy)"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
             android:visibility="gone" />
 
         <EditText
@@ -107,7 +207,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Kích thước 1"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:imeOptions="actionNext"
             android:inputType="text"
             android:visibility="gone" />
@@ -122,12 +222,23 @@
             android:textSize="14sp"
             android:visibility="gone" />
 
+        <!-- Original Size 2 Label and Input (for existing functionality) -->
+        <TextView
+            android:id="@+id/txtSize2Label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nhập kích thước 2 (dài/ ID*dài/ dày*dài)"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_marginTop="16dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
         <EditText
             android:id="@+id/edtSize2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Kích thước 2"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:imeOptions="actionNext"
             android:inputType="text"
             android:visibility="gone" />
@@ -143,13 +254,13 @@
             android:visibility="gone" />
 
         <EditText
-            android:id="@+id/edtMaterialQty"
+            android:id="@+id/edtJobNo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Số lượng vật liệu"
+            android:hint="Chi tiết công việc"
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
-            android:inputType="number"
+            android:inputType="text"
             android:visibility="gone" />
 
         <TextView
@@ -157,9 +268,29 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text=""
-            android:textColor="@android:color/holo_red_dark"
-            android:layout_marginTop="4dp"
-            android:textSize="14sp"
+            android:textColor="@android:color/black"
+            android:layout_marginTop="32dp"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtMaterialQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng vật liệu"
+            android:layout_marginTop="8dp"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtNotes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ghi chú"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="text"
             android:visibility="gone" />
 
         <EditText
