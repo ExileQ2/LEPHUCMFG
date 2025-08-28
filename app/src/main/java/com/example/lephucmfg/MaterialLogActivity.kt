@@ -36,6 +36,12 @@ class MaterialLogActivity : AppCompatActivity() {
         suspend fun getInputMaterial(@Path("HeatNo") heatNo: String): List<InputMaterialInfo>?
     }
 
+    // --- API interface for posting material usage ---
+    interface PostMUsingApi {
+        @retrofit2.http.POST("/api/PostMUsing")
+        suspend fun postMaterialUsing(@retrofit2.http.Body data: PostMUsingDto): retrofit2.Response<List<PostMUsingResponse>>
+    }
+
     // --- Data class for staff info ---
     data class StaffInfo(
         @SerializedName("fullName") val fullName: String?,
@@ -50,13 +56,39 @@ class MaterialLogActivity : AppCompatActivity() {
         @SerializedName("inpSize1") val inpSize1: String?,
         @SerializedName("inpSize2") val inpSize2: String?,
         @SerializedName("qty") val qty: Int?,
-        @SerializedName("notes") val notes: String?
+        @SerializedName("notes") val notes: String?,
+        @SerializedName("matIID") val matIID: String?
     )
 
     // --- Data class for input material info ---
     data class InputMaterialInfo(
         @SerializedName("material") val material: String?,
         @SerializedName("matPONo") val matPONo: String?
+    )
+
+    // --- Data class for POST request ---
+    data class PostMUsingDto(
+        @SerializedName("staffNo") val staffNo: Int,
+        @SerializedName("matIID") val matIID: String,
+        @SerializedName("materialQty") val materialQty: Float,
+        @SerializedName("partQty") val partQty: Int,
+        @SerializedName("jobNo") val jobNo: String,
+        @SerializedName("notes") val notes: String
+    )
+
+    // --- Data class for POST response ---
+    data class PostMUsingResponse(
+        @SerializedName("MatUID") val matUID: String?,
+        @SerializedName("MatIID") val matIID: String?,
+        @SerializedName("StaffReceiver") val staffReceiver: String?,
+        @SerializedName("MatQty") val matQty: Float?,
+        @SerializedName("PartQty") val partQty: Int?,
+        @SerializedName("PartRemain") val partRemain: Int?,
+        @SerializedName("MatUNote") val matUNote: String?,
+        @SerializedName("JobNo") val jobNo: String?,
+        @SerializedName("MatUForms") val matUForms: String?,
+        @SerializedName("Notes") val notes: String?,
+        @SerializedName("RemainNote") val remainNote: String?
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +128,7 @@ class MaterialLogActivity : AppCompatActivity() {
         val edtMaterialQty = findViewById<EditText>(R.id.edtMaterialQty)
         val txtOldMaterialQty = findViewById<TextView>(R.id.txtOldMaterialQty)
         val edtNotes = findViewById<EditText>(R.id.edtNotes)
+        val edtPartQty = findViewById<EditText>(R.id.edtPartQty)
         val edtProductQty = findViewById<EditText>(R.id.edtProductQty)
         val edtWarehouseArea = findViewById<EditText>(R.id.edtWarehouseArea)
         val btnXuatHang = findViewById<Button>(R.id.btnXuatHang)
@@ -106,10 +139,12 @@ class MaterialLogActivity : AppCompatActivity() {
         var isXuatHangModeSelected = false
         var isNhapHangModeSelected = false
         var selectedMaterialType = "" // "TẤM", "CÂY", or "ỐNG"
+        var selectedMatIID = "" // Store the selected Material Input ID for POST function
 
         val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
         val heatNoApi = RetrofitClient.retrofitPublic.create(HeatNoApi::class.java)
         val inputMaterialApi = RetrofitClient.retrofitPublic.create(InputMaterialApi::class.java)
+        val postMUsingApi = RetrofitClient.retrofitPublic.create(PostMUsingApi::class.java)
 
         // --- QR Scan integration ---
         val editFields = mapOf(
@@ -195,6 +230,9 @@ class MaterialLogActivity : AppCompatActivity() {
 
             edtNotes.setText("")
             edtNotes.visibility = android.view.View.GONE
+
+            edtPartQty.setText("")
+            edtPartQty.visibility = android.view.View.GONE
 
             edtProductQty.setText("")
             edtProductQty.visibility = android.view.View.GONE
@@ -291,8 +329,10 @@ class MaterialLogActivity : AppCompatActivity() {
                                         val inpSize2 = info.inpSize2 ?: ""
                                         val qty = info.qty?.toString() ?: ""
                                         val notes = info.notes ?: ""
+                                        val matIID = info.matIID ?: ""
 
-                                        val buttonText = "$material, SL vật liệu $existQty, $inpSize1 * $inpSize2, SL con hàng $qty, $notes"
+                                        // Include MatIID in the button text
+                                        val buttonText = "ID: $matIID - $material, SL vật liệu $existQty, $inpSize1 * $inpSize2, SL con hàng $qty, $notes"
 
                                         val button = Button(this@MaterialLogActivity).apply {
                                             text = buttonText
@@ -306,8 +346,11 @@ class MaterialLogActivity : AppCompatActivity() {
                                             }
 
                                             setOnClickListener {
-                                                // Show selected material in the TextView
-                                                txtSelectedMaterial.text = "Tên vật liệu: $material"
+                                                // Store the MatIID internally for POST function
+                                                selectedMatIID = info.matIID ?: ""
+
+                                                // Show selected material with MatIID in the TextView
+                                                txtSelectedMaterial.text = "ID: $matIID - Tên vật liệu: $material"
                                                 txtSelectedMaterial.visibility = android.view.View.VISIBLE
                                                 txtSelectedMaterial.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
 
@@ -335,6 +378,9 @@ class MaterialLogActivity : AppCompatActivity() {
 
                                                 // Show notes field
                                                 edtNotes.visibility = android.view.View.VISIBLE
+
+                                                // Show part quantity field
+                                                edtPartQty.visibility = android.view.View.VISIBLE
 
                                                 // Hide product quantity and warehouse area fields
                                                 edtProductQty.visibility = android.view.View.GONE
@@ -504,6 +550,106 @@ class MaterialLogActivity : AppCompatActivity() {
             // Show warehouse area and update button
             edtWarehouseArea.visibility = android.view.View.VISIBLE
             btnXuatHang.visibility = android.view.View.VISIBLE
+        }
+
+        // "Cập nhật" button click listener for submitting material usage data
+        btnXuatHang.setOnClickListener {
+            // Validate required fields for Xuất phôi mode
+            if (isXuatHangModeSelected) {
+                val staffNoStr = edtStaffNo.text.toString().trim()
+                val jobNo = edtJobNo.text.toString().trim()
+                val materialQtyStr = edtMaterialQty.text.toString().trim()
+                val partQtyStr = edtPartQty.text.toString().trim()
+                val notes = edtNotes.text.toString().trim()
+
+                // Validation
+                if (staffNoStr.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập số thợ", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                if (selectedMatIID.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng chọn vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                if (jobNo.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập chi tiết công việc", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                if (materialQtyStr.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập số lượng vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                if (partQtyStr.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập số lượng thành phẩm", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                try {
+                    val staffNo = staffNoStr.toInt()
+                    val materialQty = materialQtyStr.toFloat()
+                    val partQty = partQtyStr.toInt()
+
+                    // Create POST data object
+                    val postData = PostMUsingDto(
+                        staffNo = staffNo,
+                        matIID = selectedMatIID,
+                        materialQty = materialQty,
+                        partQty = partQty,
+                        jobNo = jobNo,
+                        notes = notes
+                    )
+
+                    // Show loading state
+                    btnXuatHang.text = "Đang xử lý..."
+                    btnXuatHang.isEnabled = false
+
+                    // Submit data to API
+                    lifecycleScope.launch {
+                        try {
+                            val response = postMUsingApi.postMaterialUsing(postData)
+
+                            if (response.isSuccessful) {
+                                val responseBody = response.body()
+                                if (responseBody != null && responseBody.isNotEmpty()) {
+                                    // Success - show response data
+                                    val result = responseBody[0]
+                                    val successMessage = "Thành công!\nMã UID: ${result.matUID}\nSố lượng còn lại: ${result.partRemain}"
+
+                                    android.widget.Toast.makeText(this@MaterialLogActivity, successMessage, android.widget.Toast.LENGTH_LONG).show()
+
+                                    // Clear form after successful submission
+                                    clearAllFields()
+                                    resetButtonStates()
+                                    edtStaffNo.setText("")
+                                    edtHeatNo.setText("")
+                                    txtStaffInfo.text = ""
+                                    selectedMatIID = ""
+                                } else {
+                                    android.widget.Toast.makeText(this@MaterialLogActivity, "Không có dữ liệu trả về", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                // Handle API error response
+                                val errorMessage = response.errorBody()?.string() ?: "Lỗi không xác định"
+                                android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi: $errorMessage", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        } catch (e: Exception) {
+                            // Handle network or other errors
+                            android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi kết nối: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                        } finally {
+                            // Reset button state
+                            btnXuatHang.text = "Cập nhật"
+                            btnXuatHang.isEnabled = true
+                        }
+                    }
+
+                } catch (e: NumberFormatException) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập số hợp lệ", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 }

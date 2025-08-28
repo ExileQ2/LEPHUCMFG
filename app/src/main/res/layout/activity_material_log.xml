@@ -294,6 +294,16 @@
             android:visibility="gone" />
 
         <EditText
+            android:id="@+id/edtPartQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng thành phẩm"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:visibility="gone" />
+
+        <EditText
             android:id="@+id/edtProductQty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

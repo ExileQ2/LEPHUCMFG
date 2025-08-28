@@ -101,9 +101,204 @@ class MachineLogActivity : AppCompatActivity() {
         val qtyRework: Int
     )
 
-    // Cache for tracking submitted processNo with timestamps
-    private val submittedProcessCache = mutableMapOf<String, Long>()
-    private val CACHE_DURATION_HOURS = 4
+    // Shared function to process machine and staff data
+    private suspend fun processMachineAndStaff() {
+        val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
+        val edtMcName = findViewById<EditText>(R.id.edtMcName)
+        val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
+        val txtProcessNo = findViewById<TextView>(R.id.txtProcessNo)
+        val txtMachineRunning = findViewById<TextView>(R.id.txtMachineRunning)
+        val layoutSmallEdits = findViewById<LinearLayout>(R.id.layoutSmallEdits)
+        val edtJobNo = findViewById<EditText>(R.id.edtJobNo)
+        val edtProOrdNo = findViewById<EditText>(R.id.edtProOrdNo)
+        val edtSerial = findViewById<EditText>(R.id.edtSerial)
+        val edtGhiChu = findViewById<EditText>(R.id.edtGhiChu)
+        val layoutProOrdNoResults = findViewById<android.widget.GridLayout>(R.id.layoutProOrdNoResults)
+        val machineApi = RetrofitClient.retrofitPublic.create(MachineApi::class.java)
+
+        val staffNo = edtStaffNo.text.toString().trim()
+        val mcName = edtMcName.text.toString().trim()
+
+        // If machine code is empty, clear everything and return
+        if (mcName.isEmpty()) {
+            txtMachineInfo.text = ""
+            txtProcessNo.text = ""
+            txtMachineRunning.visibility = View.GONE
+            layoutSmallEdits.visibility = View.GONE
+            edtJobNo.isEnabled = true
+            edtProOrdNo.isEnabled = true
+            edtSerial.isEnabled = true
+            edtGhiChu.isEnabled = true
+            updateSubmitButtonState()
+            return
+        }
+
+        // Show loading indicator
+        txtMachineInfo.text = LoadingStates.LOADING
+        txtMachineInfo.setTextColor(LoadingStates.getLoadingColor(resources))
+
+        var machineModel: String? = null
+        var machineStatus: String? = null
+
+        // Fetch machine info
+        try {
+            val info = machineApi.getMachine(mcName)
+            if (info != null) {
+                txtMachineInfo.text = listOfNotNull(info.model, info.status).joinToString(", ")
+                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
+                machineModel = info.model
+                machineStatus = info.status
+            } else {
+                txtMachineInfo.text = "Không lấy được dữ liệu"
+                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+            }
+        } catch (e: Exception) {
+            txtMachineInfo.text = "Không lấy được dữ liệu"
+            txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+        }
+
+        // Fetch ProcessNo if both staff and machine are available
+        var processNoValue: String? = null
+        var processNoDto: ProcessNoDto? = null
+
+        if (staffNo.isNotEmpty()) {
+            try {
+                val processNoApi = RetrofitClient.retrofitPublic.create(ProcessNoApi::class.java)
+                processNoDto = processNoApi.getProcessNo(staffNo, mcName)
+                processNoValue = processNoDto.processNo?.trim()
+                txtProcessNo.text = processNoValue ?: ""
+
+                // If we have a processNo, show "Máy đang chạy" and auto-fill fields
+                if (!processNoValue.isNullOrBlank()) {
+                    txtMachineRunning.visibility = View.VISIBLE
+                    txtMachineRunning.text = "Máy đang chạy"
+                    txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_green_dark))
+                    txtMachineRunning.setTypeface(null, android.graphics.Typeface.NORMAL)
+                    layoutSmallEdits.visibility = View.VISIBLE
+
+                    // Auto-fill fields with data from processNoDto
+                    if (!machineModel.isNullOrBlank()) {
+                        edtJobNo.setText(machineModel)
+                        edtJobNo.isEnabled = false
+                    }
+
+                    if (!processNoDto.proOrdNo2.isNullOrBlank()) {
+                        edtProOrdNo.setText(processNoDto.proOrdNo2)
+                        edtProOrdNo.requestFocus()
+                        edtProOrdNo.clearFocus()
+                        edtProOrdNo.isEnabled = false
+                    }
+
+                    if (!processNoDto.serial2.isNullOrBlank()) {
+                        edtSerial.setText(processNoDto.serial2)
+                        edtSerial.isEnabled = true
+                    }
+
+                    if (!processNoDto.note.isNullOrBlank()) {
+                        edtGhiChu.setText(processNoDto.note)
+                        edtGhiChu.isEnabled = true
+                    }
+
+                    // Hide keyboard and clear any remaining focus
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.hideSoftInputFromWindow(edtGhiChu.windowToken, 0)
+                    layoutProOrdNoResults.removeAllViews()
+
+                    updateSubmitButtonState()
+                    return
+                }
+            } catch (e: Exception) {
+                txtProcessNo.text = ""
+            }
+        } else {
+            txtProcessNo.text = ""
+        }
+
+        // Show machine status based on machine status only
+        when {
+            machineStatus?.contains("Status: Ready", ignoreCase = true) == true -> {
+                txtMachineRunning.visibility = View.VISIBLE
+                txtMachineRunning.text = "Đang chờ việc"
+                txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
+                txtMachineRunning.setTypeface(null, android.graphics.Typeface.NORMAL)
+                layoutSmallEdits.visibility = View.GONE
+            }
+            machineStatus?.contains("Status: Processing", ignoreCase = true) == true -> {
+                txtMachineRunning.visibility = View.VISIBLE
+                txtMachineRunning.text = "Đang gia công"
+                txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_green_dark))
+                txtMachineRunning.setTypeface(null, android.graphics.Typeface.BOLD)
+                layoutSmallEdits.visibility = View.GONE
+            }
+            machineStatus?.contains("Status: Maintenance", ignoreCase = true) == true -> {
+                txtMachineRunning.visibility = View.VISIBLE
+                txtMachineRunning.text = "Đang bảo trì"
+                txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                txtMachineRunning.setTypeface(null, android.graphics.Typeface.NORMAL)
+                layoutSmallEdits.visibility = View.GONE
+            }
+            machineStatus?.contains("Status: BeingSetup", ignoreCase = true) == true -> {
+                txtMachineRunning.visibility = View.VISIBLE
+                txtMachineRunning.text = "Đang setup"
+                txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_orange_dark))
+                txtMachineRunning.setTypeface(null, android.graphics.Typeface.NORMAL)
+                layoutSmallEdits.visibility = View.GONE
+            }
+            machineStatus?.contains("Status: Damage", ignoreCase = true) == true -> {
+                txtMachineRunning.visibility = View.VISIBLE
+                txtMachineRunning.text = "Báo hư chờ sửa"
+                txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                txtMachineRunning.setTypeface(null, android.graphics.Typeface.NORMAL)
+                layoutSmallEdits.visibility = View.GONE
+            }
+            else -> {
+                txtMachineRunning.visibility = View.GONE
+                layoutSmallEdits.visibility = View.GONE
+            }
+        }
+
+        // Re-enable editing when machine is not running for this user
+        edtJobNo.isEnabled = true
+        edtProOrdNo.isEnabled = true
+        edtSerial.isEnabled = true
+        edtGhiChu.isEnabled = true
+
+        updateSubmitButtonState()
+    }
+
+    // Function to check machine status and control submit button
+    private fun updateSubmitButtonState() {
+        val btnSubmit = findViewById<Button>(R.id.btnSubmit)
+        val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
+        val txtMachineRunning = findViewById<TextView>(R.id.txtMachineRunning)
+
+        val machineInfoText = txtMachineInfo.text.toString()
+        val machineRunningText = txtMachineRunning.text.toString()
+        val isMachineRunningVisible = txtMachineRunning.visibility == View.VISIBLE
+
+        // Check conditions that should block submit
+        val hasProcessingStatus = machineInfoText.contains("Status: Processing", ignoreCase = true)
+        val isShowingProcessingForOther = isMachineRunningVisible && machineRunningText == "Đang gia công"
+        val hasMaintenanceStatus = machineInfoText.contains("Status: Maintenance", ignoreCase = true)
+        val isShowingMaintenance = isMachineRunningVisible && machineRunningText == "Đang bảo trì"
+        val hasBeingSetupStatus = machineInfoText.contains("Status: BeingSetup", ignoreCase = true)
+        val isShowingBeingSetup = isMachineRunningVisible && machineRunningText == "Đang setup"
+        val hasDamageStatus = machineInfoText.contains("Status: Damage", ignoreCase = true)
+        val isShowingDamage = isMachineRunningVisible && machineRunningText == "Báo hư chờ sửa"
+
+        val shouldBlockSubmit = (hasProcessingStatus && isShowingProcessingForOther) ||
+                               (hasMaintenanceStatus && isShowingMaintenance) ||
+                               (hasBeingSetupStatus && isShowingBeingSetup) ||
+                               (hasDamageStatus && isShowingDamage)
+
+        if (shouldBlockSubmit) {
+            btnSubmit.isEnabled = false
+            btnSubmit.alpha = 0.5f // Gray out the button
+        } else {
+            btnSubmit.isEnabled = true
+            btnSubmit.alpha = 1.0f // Restore normal appearance
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -251,6 +446,9 @@ class MachineLogActivity : AppCompatActivity() {
                                 txtStaffInfo.text = "Không lấy được dữ liệu"
                                 txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
                             }
+
+                            // Call shared function to process machine and staff combination
+                            processMachineAndStaff()
                         }
                     } catch (e: NumberFormatException) {
                         // Show error if input is not a number
@@ -260,6 +458,10 @@ class MachineLogActivity : AppCompatActivity() {
                 } else {
                     // Clear staff info if input is empty
                     txtStaffInfo.text = ""
+                    // Call shared function to clear machine processing
+                    lifecycleScope.launch {
+                        processMachineAndStaff()
+                    }
                 }
             }
         }
@@ -267,123 +469,9 @@ class MachineLogActivity : AppCompatActivity() {
         // --- Block for handling Machine Code ("Mã máy") input and validation ---
         edtMcName.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
-                val mcName = edtMcName.text.toString().trim()
-                if (mcName.isNotEmpty()) {
-                    // Show loading indicator using LoadingStates
-                    txtMachineInfo.text = LoadingStates.LOADING
-                    txtMachineInfo.setTextColor(LoadingStates.getLoadingColor(resources))
-
-                    // Launch coroutine to fetch machine info asynchronously
-                    lifecycleScope.launch {
-                        var machineModel: String? = null
-                        try {
-                            val info = machineApi.getMachine(mcName)
-                            if (info != null) {
-                                // Display machine model and status if found - blue color for valid and bold
-                                txtMachineInfo.text = listOfNotNull(info.model, info.status).joinToString(", ")
-                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_blue_dark))
-                                //txtMachineInfo.setTypeface(null, android.graphics.Typeface.BOLD)  // Uncomment to make bold
-                                machineModel = info.model
-                            } else {
-                                // Show error if machine not found - API responded but returned null (invalid)
-                                txtMachineInfo.text = "Không lấy được dữ liệu"
-                                txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-                            }
-                        } catch (e: Exception) {
-                            // Show server connection error if API call fails
-                            txtMachineInfo.text = "Không lấy được dữ liệu"
-                            txtMachineInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-                        }
-
-                        // Fetch ProcessNo and additional data
-                        try {
-                            val staffNo = edtStaffNo.text.toString().trim()
-                            if (staffNo.isNotEmpty()) {
-                                val processNoApi = RetrofitClient.retrofitPublic.create(ProcessNoApi::class.java)
-                                val processNoDto = processNoApi.getProcessNo(staffNo, mcName)
-                                val processNoValue = processNoDto.processNo?.trim()
-                                txtProcessNo.text = processNoValue ?: ""
-
-                                // Show/hide machine running status based on processNo
-                                if (!processNoValue.isNullOrBlank()) {
-                                    txtMachineRunning.visibility = View.VISIBLE
-                                    txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_green_dark))
-                                    layoutSmallEdits.visibility = View.VISIBLE
-
-                                    //when "Máy đang chạy" appear
-                                    // Auto-fill fields with data from processNoDto
-
-                                    // 1. Auto-fill "Chi tiết công việc" with machine model and disable editing
-                                    if (!machineModel.isNullOrBlank()) {
-                                        edtJobNo.setText(machineModel)
-                                        edtJobNo.isEnabled = false
-                                        // Don't trigger focus/unfocus to avoid showing button boxes
-                                    }
-
-                                    // 2. Auto-fill "Lệnh sản xuất" with ProOrdNo2 and disable editing
-                                    if (!processNoDto.proOrdNo2.isNullOrBlank()) {
-                                        edtProOrdNo.setText(processNoDto.proOrdNo2)
-                                        // Trigger focus/unfocus to activate serial textview before disabling
-                                        edtProOrdNo.requestFocus()
-                                        edtProOrdNo.clearFocus()
-                                        edtProOrdNo.isEnabled = false
-                                    }
-
-                                    // 3. Auto-fill "Số series" with Serial2 but allow editing
-                                    if (!processNoDto.serial2.isNullOrBlank()) {
-                                        edtSerial.setText(processNoDto.serial2)
-                                        edtSerial.isEnabled = true
-                                    }
-
-                                    // 4. Auto-fill "Ghi chú" with Note but allow editing
-                                    if (!processNoDto.note.isNullOrBlank()) {
-                                        edtGhiChu.setText(processNoDto.note)
-                                        edtGhiChu.isEnabled = true
-                                    }
-
-                                    // Hide keyboard and clear any remaining focus
-                                    val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-                                    imm?.hideSoftInputFromWindow(edtGhiChu.windowToken, 0)
-                                    // Always hide button boxes when machine is running
-                                    layoutProOrdNoResults.removeAllViews()
-
-                                } else {
-                                    txtMachineRunning.visibility = View.GONE
-                                    layoutSmallEdits.visibility = View.GONE
-                                    // Re-enable editing when machine is not running
-                                    edtJobNo.isEnabled = true
-                                    edtProOrdNo.isEnabled = true
-                                    edtSerial.isEnabled = true
-                                    edtGhiChu.isEnabled = true
-                                }
-                            } else {
-                                txtProcessNo.text = ""
-                                txtMachineRunning.visibility = View.GONE
-                                layoutSmallEdits.visibility = View.GONE
-                                edtJobNo.isEnabled = true
-                                edtProOrdNo.isEnabled = true
-                                edtSerial.isEnabled = true
-                                edtGhiChu.isEnabled = true
-                            }
-                        } catch (e: Exception) {
-                            txtProcessNo.text = ""
-                            txtMachineRunning.visibility = View.GONE
-                            layoutSmallEdits.visibility = View.GONE
-                            edtJobNo.isEnabled = true
-                            edtProOrdNo.isEnabled = true
-                            edtSerial.isEnabled = true
-                            edtGhiChu.isEnabled = true
-                        }
-                    }
-                } else {
-                    txtMachineInfo.text = ""
-                    txtProcessNo.text = ""
-                    txtMachineRunning.visibility = View.GONE
-                    layoutSmallEdits.visibility = View.GONE
-                    edtJobNo.isEnabled = true
-                    edtProOrdNo.isEnabled = true
-                    edtSerial.isEnabled = true
-                    edtGhiChu.isEnabled = true
+                // Call shared function to process machine and staff combination
+                lifecycleScope.launch {
+                    processMachineAndStaff()
                 }
             }
         }
@@ -575,30 +663,6 @@ class MachineLogActivity : AppCompatActivity() {
 
             val processNoForDto = txtProcessNo.text.toString().let { if (it.isBlank()) " " else it }
 
-            // Check for duplicate submission within 4 hours
-            if (processNoForDto.trim().isNotEmpty() && processNoForDto.trim() != " ") {
-                val currentTime = System.currentTimeMillis()
-                val cacheKey = processNoForDto.trim()
-
-                // Clean up expired cache entries
-                val expiredKeys = submittedProcessCache.filter { (_, timestamp) ->
-                    currentTime - timestamp > CACHE_DURATION_HOURS * 60 * 60 * 1000
-                }.keys
-                expiredKeys.forEach { submittedProcessCache.remove(it) }
-
-                // Check if this processNo was submitted within 4 hours
-                val lastSubmissionTime = submittedProcessCache[cacheKey]
-                if (lastSubmissionTime != null) {
-                    val hoursAgo = (currentTime - lastSubmissionTime) / (60 * 60 * 1000)
-                    val errorMessage = "ProcessNo này đã được gửi ${hoursAgo}h trước. Vui lòng chờ ${CACHE_DURATION_HOURS - hoursAgo}h nữa."
-                    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
-                    txtSendStatus.visibility = View.VISIBLE
-                    txtSendStatus.text = errorMessage
-                    txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-                    return@setOnClickListener
-                }
-            }
-
             // Show immediate feedback and disable button
             Toast.makeText(this, "Dữ liệu đã được gửi", Toast.LENGTH_SHORT).show()
             btnSubmit.isEnabled = false
@@ -625,11 +689,6 @@ class MachineLogActivity : AppCompatActivity() {
                     android.util.Log.d("POST_DTO", Gson().toJson(dto)) // Log the payload
                     val response = postApi.postLog(dto)
                     if (response.isSuccessful) {
-                        // Cache the successful submission
-                        if (processNoForDto.trim().isNotEmpty() && processNoForDto.trim() != " ") {
-                            submittedProcessCache[processNoForDto.trim()] = System.currentTimeMillis()
-                        }
-
                         Toast.makeText(this@MachineLogActivity, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
                         txtSendStatus.text = "Cập nhật thành công"
                         txtSendStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark))
