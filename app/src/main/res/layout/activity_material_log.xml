@@ -283,6 +283,26 @@
             android:inputType="number"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/txtPartQtyLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Số lượng con hàng:"
+            android:textColor="@android:color/black"
+            android:layout_marginTop="16dp"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtPartQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng con hàng"
+            android:layout_marginTop="8dp"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:visibility="gone" />
+
         <EditText
             android:id="@+id/edtNotes"
             android:layout_width="match_parent"
@@ -294,26 +314,6 @@
             android:visibility="gone" />
 
         <EditText
-            android:id="@+id/edtPartQty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Số lượng thành phẩm"
-            android:layout_marginTop="16dp"
-            android:imeOptions="actionNext"
-            android:inputType="number"
-            android:visibility="gone" />
-
-        <EditText
-            android:id="@+id/edtProductQty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Số lượng con hàng"
-            android:layout_marginTop="16dp"
-            android:imeOptions="actionNext"
-            android:inputType="number"
-            android:visibility="gone" />
-
-        <EditText
             android:id="@+id/edtWarehouseArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -321,6 +321,16 @@
             android:layout_marginTop="16dp"
             android:imeOptions="actionNext"
             android:inputType="text"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/edtMatQty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số lượng vật liệu"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionNext"
+            android:inputType="numberDecimal"
             android:visibility="gone" />
 
         <Button
