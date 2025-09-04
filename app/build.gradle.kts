@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.lephucmfg"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0" // Changed to match API format
+        versionCode = 2        // Increment this
+        versionName = "1.0.1"  // Update to match what API expects
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

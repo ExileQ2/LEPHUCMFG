@@ -1,14 +1,13 @@
 {
   "AppVersions": {
-    "current": "1.0.0",
-    "latest": "1.0.0",
+    "current": "1.0.1",
+    "latest": "1.0.1",
     "forceUpdate": false,
     "downloadUrl": "http://192.168.1.77:5080/api/android/download",
-    "changelog": "Initial release"
+    "changelog": "Fixed infinite update loop"
   },
   "UpdateSettings": {
     "checkEnabled": true,
     "maintenanceMode": false
   }
 }
-

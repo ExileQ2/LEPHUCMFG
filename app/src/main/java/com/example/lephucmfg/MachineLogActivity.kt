@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
 import com.example.lephucmfg.utils.LoadingStates
+import com.example.lephucmfg.utils.StaffPreferences
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.launch
 import okhttp3.ResponseBody
@@ -31,6 +32,10 @@ import retrofit2.http.POST
 import retrofit2.http.Body
 
 class MachineLogActivity : AppCompatActivity() {
+
+    // Add StaffPreferences instance
+    private lateinit var staffPreferences: StaffPreferences
+
     // --- API interface for fetching staff info ("Thợ") ---
     interface StaffApi {
         @GET("/api/GetStaff/{staffNo}")
@@ -304,10 +309,27 @@ class MachineLogActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_machine_log)
 
+        // Initialize StaffPreferences
+        staffPreferences = StaffPreferences(this)
+
         // --- UI references for "Thợ" (Staff) block ---
         val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
         val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
         val api = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
+
+        // Load saved staff number and info on startup
+        val savedStaffNumber = staffPreferences.getStaffNumber()
+        val savedStaffInfo = staffPreferences.getStaffInfo()
+
+        if (savedStaffNumber.isNotEmpty()) {
+            edtStaffNo.setText(savedStaffNumber)
+            if (savedStaffInfo.isNotEmpty()) {
+                txtStaffInfo.text = savedStaffInfo
+                txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+            }
+            // Auto-call API with saved staff number
+            autoCallStaffApi(savedStaffNumber.toIntOrNull() ?: 0)
+        }
 
         // --- UI references for "Mã máy" (Machine) block ---
         val edtMcName = findViewById<EditText>(R.id.edtMcName)
@@ -420,7 +442,11 @@ class MachineLogActivity : AppCompatActivity() {
         edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val staffNoStr = edtStaffNo.text.toString().trim()
+
+                // Save staff number to SharedPreferences when user finishes editing
                 if (staffNoStr.isNotEmpty()) {
+                    staffPreferences.saveStaffNumber(staffNoStr)
+
                     try {
                         val staffNo = staffNoStr.toInt()
                         // Show loading indicator using LoadingStates
@@ -433,18 +459,23 @@ class MachineLogActivity : AppCompatActivity() {
                                 val info = api.getStaff(staffNo)
                                 if (info != null) {
                                     // Display staff info if found - dark red color for valid and bold
-                                    txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                    val staffInfoText = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                    txtStaffInfo.text = staffInfoText
                                     txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
-                                    //txtStaffInfo.setTypeface(null, android.graphics.Typeface.BOLD)  // Uncomment to make bold
+
+                                    // Save staff info to SharedPreferences
+                                    staffPreferences.saveStaffInfo(staffInfoText)
                                 } else {
                                     // Show error if staff not found - API responded but returned null (invalid)
                                     txtStaffInfo.text = "Không lấy được dữ liệu"
                                     txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                    staffPreferences.saveStaffInfo("")
                                 }
                             } catch (e: Exception) {
                                 // Show server connection error if API call fails
                                 txtStaffInfo.text = "Không lấy được dữ liệu"
                                 txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                                staffPreferences.saveStaffInfo("")
                             }
 
                             // Call shared function to process machine and staff combination
@@ -454,10 +485,13 @@ class MachineLogActivity : AppCompatActivity() {
                         // Show error if input is not a number
                         txtStaffInfo.text = "Không lấy được dữ liệu"
                         txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                        staffPreferences.saveStaffInfo("")
                     }
                 } else {
                     // Clear staff info if input is empty
                     txtStaffInfo.text = ""
+                    // Clear saved staff data if field is emptied
+                    staffPreferences.clearStaffPreferences()
                     // Call shared function to clear machine processing
                     lifecycleScope.launch {
                         processMachineAndStaff()
@@ -710,6 +744,32 @@ class MachineLogActivity : AppCompatActivity() {
                     // Re-enable button after operation completes
                     btnSubmit.isEnabled = true
                 }
+            }
+        }
+    }
+
+    // Auto-call staff API with saved staff number
+    private fun autoCallStaffApi(staffNo: Int) {
+        val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
+        val api = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
+
+        txtStaffInfo.text = LoadingStates.LOADING
+        txtStaffInfo.setTextColor(LoadingStates.getLoadingColor(resources))
+
+        lifecycleScope.launch {
+            try {
+                val info = api.getStaff(staffNo)
+                if (info != null) {
+                    val staffInfoText = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                    txtStaffInfo.text = staffInfoText
+                    txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                } else {
+                    txtStaffInfo.text = "Không lấy được dữ liệu"
+                    txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
+                }
+            } catch (_: Exception) {
+                txtStaffInfo.text = "Không lấy được dữ liệu"
+                txtStaffInfo.setTextColor(resources.getColor(android.R.color.holo_red_dark))
             }
         }
     }

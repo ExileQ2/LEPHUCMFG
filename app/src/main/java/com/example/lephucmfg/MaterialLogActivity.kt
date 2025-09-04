@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
 import com.example.lephucmfg.utils.LoadingStates
+import com.example.lephucmfg.utils.StaffPreferences
 import com.google.gson.annotations.SerializedName
 import com.google.zxing.integration.android.IntentIntegrator
 import kotlinx.coroutines.launch
@@ -18,6 +19,10 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 
 class MaterialLogActivity : AppCompatActivity() {
+
+    // Add StaffPreferences instance
+    private lateinit var staffPreferences: StaffPreferences
+
     // --- API interface for fetching staff info ("Thợ") ---
     interface StaffApi {
         @GET("/api/GetStaff/{staffNo}")
@@ -107,6 +112,9 @@ class MaterialLogActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_material_log)
 
+        // Initialize StaffPreferences
+        staffPreferences = StaffPreferences(this)
+
         val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
         val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
         val edtHeatNo = findViewById<EditText>(R.id.edtHeatNo)
@@ -114,6 +122,20 @@ class MaterialLogActivity : AppCompatActivity() {
         val btnScan = findViewById<Button>(R.id.btnScan)
         val layoutHeatInfoButtons = findViewById<LinearLayout>(R.id.layoutHeatInfoButtons)
         val txtSelectedMaterial = findViewById<TextView>(R.id.txtSelectedMaterial)
+
+        // Load saved staff number and info on startup
+        val savedStaffNumber = staffPreferences.getStaffNumber()
+        val savedStaffInfo = staffPreferences.getStaffInfo()
+
+        if (savedStaffNumber.isNotEmpty()) {
+            edtStaffNo.setText(savedStaffNumber)
+            if (savedStaffInfo.isNotEmpty()) {
+                txtStaffInfo.text = savedStaffInfo
+                txtStaffInfo.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            }
+            // Auto-call API with saved staff number
+            autoCallStaffApi(savedStaffNumber.toIntOrNull() ?: 0)
+        }
 
         // New material type selection UI elements
         val layoutMaterialTypeButtons = findViewById<LinearLayout>(R.id.layoutMaterialTypeButtons)
@@ -199,7 +221,7 @@ class MaterialLogActivity : AppCompatActivity() {
             selectedMaterialType = ""
         }
 
-        // Function to clear all form fields
+        // Function to clear all form fields (EXCEPT staff input - preserve during mode switching)
         fun clearAllFields() {
             // Clear text fields
             txtHeatInfo.text = ""
@@ -262,6 +284,12 @@ class MaterialLogActivity : AppCompatActivity() {
 
             // Clear any dynamic buttons
             layoutHeatInfoButtons.removeAllViews()
+
+            // Clear heat number field
+            edtHeatNo.setText("")
+
+            // PRESERVED: Staff input (edtStaffNo and txtStaffInfo) are NOT cleared
+            // This allows the staff number to survive mode switching
         }
 
         // Nhập phôi button click listener
@@ -284,7 +312,11 @@ class MaterialLogActivity : AppCompatActivity() {
         edtStaffNo.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val staffNoStr = edtStaffNo.text.toString().trim()
+
+                // Save staff number to SharedPreferences when user finishes editing
                 if (staffNoStr.isNotEmpty()) {
+                    staffPreferences.saveStaffNumber(staffNoStr)
+
                     try {
                         val staffNo = staffNoStr.toInt()
                         txtStaffInfo.text = getString(R.string.loading)
@@ -293,22 +325,31 @@ class MaterialLogActivity : AppCompatActivity() {
                             try {
                                 val info = staffApi.getStaff(staffNo)
                                 if (info != null) {
-                                    txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                    val staffInfoText = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                                    txtStaffInfo.text = staffInfoText
                                     txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+
+                                    // Save staff info to SharedPreferences
+                                    staffPreferences.saveStaffInfo(staffInfoText)
                                 } else {
                                     txtStaffInfo.text = getString(R.string.data_not_found)
                                     txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                    staffPreferences.saveStaffInfo("")
                                 }
                             } catch (_: Exception) {
                                 txtStaffInfo.text = getString(R.string.data_not_found)
                                 txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                staffPreferences.saveStaffInfo("")
                             }
                         }
                     } catch (_: NumberFormatException) {
                         txtStaffInfo.text = getString(R.string.data_not_found)
+                        staffPreferences.saveStaffInfo("")
                     }
                 } else {
                     txtStaffInfo.text = ""
+                    // Clear saved staff data if field is emptied
+                    staffPreferences.clearStaffPreferences()
                 }
             }
         }
@@ -817,6 +858,32 @@ class MaterialLogActivity : AppCompatActivity() {
                 } catch (e: NumberFormatException) {
                     android.widget.Toast.makeText(this, "Vui lòng nhập số hợp lệ", android.widget.Toast.LENGTH_SHORT).show()
                 }
+            }
+        }
+    }
+
+    // Auto-call staff API with saved staff number
+    private fun autoCallStaffApi(staffNo: Int) {
+        val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
+        val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
+        val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
+
+        txtStaffInfo.text = getString(R.string.loading)
+        txtStaffInfo.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+
+        lifecycleScope.launch {
+            try {
+                val info = staffApi.getStaff(staffNo)
+                if (info != null) {
+                    txtStaffInfo.text = listOfNotNull(info.fullName, info.workJob, info.workPlace).joinToString(", ")
+                    txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                } else {
+                    txtStaffInfo.text = getString(R.string.data_not_found)
+                    txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                }
+            } catch (_: Exception) {
+                txtStaffInfo.text = getString(R.string.data_not_found)
+                txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
             }
         }
     }

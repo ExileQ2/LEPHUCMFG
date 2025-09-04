@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Downloading Update"
+        android:text="Đang tải bản cập nhật..."
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
@@ -34,7 +34,7 @@
         android:id="@+id/txtDownloadInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Preparing download..."
+        android:text="Đang chuẩn bị tải..."
         android:textSize="12sp"
         android:layout_gravity="center"
         android:layout_marginTop="8dp"

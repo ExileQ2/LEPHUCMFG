@@ -17,6 +17,20 @@
         android:layout_marginStart="8dp"
         android:layout_marginBottom="8dp" />
 
+    <!-- Version text in bottom left corner -->
+    <TextView
+        android:id="@+id/txtVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="4dp"
+        android:layout_marginBottom="4dp"
+        android:text=""
+        android:textColor="@android:color/darker_gray"
+        android:textSize="10sp"
+        android:alpha="0.7" />
+
     <!-- Main Machine Log button - freely positioned and resizable -->
     <Button
         android:id="@+id/btnMachineLog"
@@ -38,6 +52,21 @@
         android:layout_marginEnd="20dp"
         android:layout_marginTop="28dp"
         android:text="NGUYÊN VẬT LIỆU" />
+
+    <!-- Beta label for Material Log button -->
+    <TextView
+        android:id="@+id/txtMaterialLogBeta"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/btnMaterialLog"
+        android:layout_alignStart="@id/btnMaterialLog"
+        android:layout_alignEnd="@id/btnMaterialLog"
+        android:layout_marginTop="4dp"
+        android:text="(thử nghiệm)"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:gravity="center" />
 
     <ScrollView
         android:id="@+id/scrollChangeLog"

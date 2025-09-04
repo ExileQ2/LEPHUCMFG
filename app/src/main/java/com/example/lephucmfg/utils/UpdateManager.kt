@@ -83,10 +83,10 @@ class UpdateManager(private val context: Context) {
 
     private fun showUpdateDialog(versionInfo: AndroidVersionDto) {
         val builder = AlertDialog.Builder(context)
-        builder.setTitle("App Update Required")
-        builder.setMessage("A new version (${versionInfo.latestVersion}) is available. The app will now update.")
+        builder.setTitle("Cập nhật ứng dụng")
+        builder.setMessage("Phiên bản mới (${versionInfo.latestVersion}) đã có sẵn.")
 
-        builder.setPositiveButton("Update Now") { _, _ ->
+        builder.setPositiveButton("Cập nhật") { _, _ ->
             if (checkInstallPermission()) {
                 startDownload(versionInfo)
             } else {
@@ -114,7 +114,7 @@ class UpdateManager(private val context: Context) {
                 data = Uri.parse("package:${context.packageName}")
             }
             context.startActivity(intent)
-            Toast.makeText(context, "Please enable 'Install unknown apps' and try again", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Vui lòng bật 'Cài đặt ứng dụng không rõ nguồn gốc' và thử lại", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -135,21 +135,21 @@ class UpdateManager(private val context: Context) {
         if (context is androidx.lifecycle.LifecycleOwner) {
             context.lifecycleScope.launch {
                 try {
-                    txtDownloadInfo.text = "Connecting to server..."
+                    txtDownloadInfo.text = "Đang kết nối đến máy chủ..."
 
                     val success = downloadApkWithProgress(progressBar, txtProgress, txtDownloadInfo)
                     progressDialog.dismiss()
 
                     if (success) {
-                        txtDownloadInfo.text = "Download complete! Installing..."
+                        txtDownloadInfo.text = "Tải xuống hoàn tất! Đang cài đặt..."
                         installApk()
                     } else {
-                        Toast.makeText(context, "Download failed. Please try again.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Tải xuống thất bại. Vui lòng thử lại.", Toast.LENGTH_LONG).show()
                     }
                 } catch (e: Exception) {
                     progressDialog.dismiss()
                     Log.e(TAG, "Download error", e)
-                    Toast.makeText(context, "Download error: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Lỗi tải xuống: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -166,7 +166,7 @@ class UpdateManager(private val context: Context) {
                 if (response.isSuccessful) {
                     response.body()?.let { body ->
                         withContext(Dispatchers.Main) {
-                            txtDownloadInfo.text = "Downloading APK..."
+                            txtDownloadInfo.text = "Đang tải..."
                         }
                         saveApkFileWithProgress(body, progressBar, txtProgress, txtDownloadInfo)
                         true
@@ -217,9 +217,9 @@ class UpdateManager(private val context: Context) {
                         val downloadedMB = downloadedBytes / (1024 * 1024)
                         val totalMB = totalBytes / (1024 * 1024)
                         txtDownloadInfo.text = if (totalBytes > 0) {
-                            "Downloaded $downloadedMB MB of $totalMB MB"
+                            "Đã tải $downloadedMB  / $totalMB "
                         } else {
-                            "Downloaded $downloadedMB MB"
+                            "Đã tải $downloadedMB "
                         }
                     }
                 }
@@ -230,7 +230,7 @@ class UpdateManager(private val context: Context) {
                 withContext(Dispatchers.Main) {
                     progressBar.progress = 100
                     txtProgress.text = "100%"
-                    txtDownloadInfo.text = "Download complete!"
+                    txtDownloadInfo.text = "Tải xuống hoàn tất!"
                 }
 
                 Log.d(TAG, "APK saved to: ${apkFile.absolutePath}")
@@ -258,13 +258,87 @@ class UpdateManager(private val context: Context) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
 
+                // Clean up old APK files before starting installation
+                cleanupOldApkFiles()
+
                 context.startActivity(installIntent)
             } else {
-                Toast.makeText(context, "APK file not found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Không tìm thấy tệp APK", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error installing APK", e)
-            Toast.makeText(context, "Installation error: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Lỗi cài đặt: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun cleanupOldApkFiles() {
+        try {
+            val filesDir = context.getExternalFilesDir(null)
+            Log.d(TAG, "=== CLEANUP OLD APK FILES ===")
+            Log.d(TAG, "Files directory: ${filesDir?.absolutePath}")
+
+            val allFiles = filesDir?.listFiles()
+            Log.d(TAG, "Total files in directory: ${allFiles?.size ?: 0}")
+
+            allFiles?.forEach { file ->
+                Log.d(TAG, "Checking file: ${file.name} (size: ${file.length()} bytes)")
+                if (file.name.endsWith(".apk") && file.name != APK_FILE_NAME) {
+                    Log.d(TAG, "Found old APK to delete: ${file.name}")
+                    val deleted = file.delete()
+                    Log.d(TAG, "Deletion result for ${file.name}: $deleted")
+                    if (deleted) {
+                        Log.i(TAG, "✅ Successfully deleted old APK: ${file.name}")
+                    } else {
+                        Log.w(TAG, "❌ Failed to delete old APK: ${file.name}")
+                    }
+                } else if (file.name.endsWith(".apk")) {
+                    Log.d(TAG, "Keeping current APK: ${file.name}")
+                }
+            }
+            Log.d(TAG, "=== END CLEANUP OLD APK FILES ===")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cleaning up old APK files", e)
+        }
+    }
+
+    // Enhanced cleanup method with detailed logging
+    fun cleanupAfterInstall() {
+        try {
+            Log.d(TAG, "=== CLEANUP AFTER INSTALL ===")
+            val filesDir = context.getExternalFilesDir(null)
+            Log.d(TAG, "Files directory: ${filesDir?.absolutePath}")
+
+            val apkFile = File(context.getExternalFilesDir(null), APK_FILE_NAME)
+            Log.d(TAG, "Looking for APK file: ${apkFile.absolutePath}")
+            Log.d(TAG, "APK file exists: ${apkFile.exists()}")
+
+            if (apkFile.exists()) {
+                Log.d(TAG, "APK file size before deletion: ${apkFile.length()} bytes")
+                val deleted = apkFile.delete()
+                Log.d(TAG, "Deletion result: $deleted")
+
+                if (deleted) {
+                    Log.i(TAG, "✅ Successfully cleaned up APK after install: ${APK_FILE_NAME}")
+                } else {
+                    Log.w(TAG, "❌ Failed to clean up APK after install: ${APK_FILE_NAME}")
+                }
+
+                // Verify deletion
+                Log.d(TAG, "Verification - APK file still exists: ${apkFile.exists()}")
+            } else {
+                Log.d(TAG, "No APK file found to clean up")
+            }
+
+            // List remaining files for verification
+            val remainingFiles = filesDir?.listFiles()?.filter { it.name.endsWith(".apk") }
+            Log.d(TAG, "Remaining APK files after cleanup: ${remainingFiles?.size ?: 0}")
+            remainingFiles?.forEach { file ->
+                Log.d(TAG, "Remaining APK: ${file.name} (${file.length()} bytes)")
+            }
+
+            Log.d(TAG, "=== END CLEANUP AFTER INSTALL ===")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cleaning up APK after install", e)
         }
     }
 }
