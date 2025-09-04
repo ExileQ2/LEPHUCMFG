@@ -8,11 +8,21 @@ import androidx.appcompat.app.AppCompatActivity
 import java.io.IOException
 
 import com.example.lephucmfg.ABTestingActivity
+import com.example.lephucmfg.utils.UpdateManager
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var updateManager: UpdateManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.frontpage)
+
+        // Initialize update manager
+        updateManager = UpdateManager(this)
+
+        // Check for updates when app starts
+        updateManager.checkForUpdates()
 
         // Load changelog content from assets
         val txtChangeLog = findViewById<TextView>(R.id.txtChangeLog)

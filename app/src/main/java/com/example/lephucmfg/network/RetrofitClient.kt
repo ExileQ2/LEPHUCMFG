@@ -18,5 +18,6 @@ object RetrofitClient {
         .build()
 
     val ab: AbService = retrofit.create(AbService::class.java)
+    val updateService: UpdateService = retrofit.create(UpdateService::class.java)
     val retrofitPublic: Retrofit = retrofit
 }
