@@ -35,6 +35,12 @@ class MaterialLogActivity : AppCompatActivity() {
         suspend fun getHeatNoInfo(@Path("HeatNo") heatNo: String): List<HeatNoInfo>?
     }
 
+    // --- API interface for fetching HeatNo from Production Order ---
+    interface GetHeatNoApi {
+        @GET("/api/GetHeatNo/{proOrdNo}")
+        suspend fun getHeatNo(@Path("proOrdNo") proOrdNo: String): GetHeatNoResponse?
+    }
+
     // --- API interface for fetching input material info ---
     interface InputMaterialApi {
         @GET("/api/GetInputMaterial/{HeatNo}")
@@ -58,6 +64,11 @@ class MaterialLogActivity : AppCompatActivity() {
         @SerializedName("fullName") val fullName: String?,
         @SerializedName("workJob") val workJob: String?,
         @SerializedName("workPlace") val workPlace: String?
+    )
+
+    // --- Data class for GetHeatNo response ---
+    data class GetHeatNoResponse(
+        @SerializedName("heatNo") val heatNo: String?
     )
 
     // --- Data class for heat number info ---
@@ -117,11 +128,13 @@ class MaterialLogActivity : AppCompatActivity() {
 
         val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
         val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
+        val edtProductionOrder = findViewById<EditText>(R.id.edtProductionOrder)
         val edtHeatNo = findViewById<EditText>(R.id.edtHeatNo)
         val txtHeatInfo = findViewById<TextView>(R.id.txtHeatInfo)
         val btnScan = findViewById<Button>(R.id.btnScan)
         val layoutHeatInfoButtons = findViewById<LinearLayout>(R.id.layoutHeatInfoButtons)
         val txtSelectedMaterial = findViewById<TextView>(R.id.txtSelectedMaterial)
+        val txtModeSelectionMessage = findViewById<TextView>(R.id.txtModeSelectionMessage)
 
         // Load saved staff number and info on startup
         val savedStaffNumber = staffPreferences.getStaffNumber()
@@ -179,6 +192,7 @@ class MaterialLogActivity : AppCompatActivity() {
 
         val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
         val heatNoApi = RetrofitClient.retrofitPublic.create(HeatNoApi::class.java)
+        val getHeatNoApi = RetrofitClient.retrofitPublic.create(GetHeatNoApi::class.java)
         val inputMaterialApi = RetrofitClient.retrofitPublic.create(InputMaterialApi::class.java)
         val postMUsingApi = RetrofitClient.retrofitPublic.create(PostMUsingApi::class.java)
         val postMInputApi = RetrofitClient.retrofitPublic.create(PostMInputApi::class.java)
@@ -205,12 +219,31 @@ class MaterialLogActivity : AppCompatActivity() {
         }
         scanHelper = ScanHelper(this, scanLauncher, editFields, btnScan)
 
+        // Function to disable Production Order and HeatNo fields until mode is selected
+        fun disableFieldsUntilModeSelected() {
+            edtProductionOrder.isEnabled = false
+            edtHeatNo.isEnabled = false
+            edtProductionOrder.alpha = 0.5f
+            edtHeatNo.alpha = 0.5f
+            txtModeSelectionMessage.visibility = android.view.View.VISIBLE
+        }
+
+        // Function to enable Production Order and HeatNo fields when mode is selected
+        fun enableFieldsAfterModeSelected() {
+            edtProductionOrder.isEnabled = true
+            edtHeatNo.isEnabled = true
+            edtProductionOrder.alpha = 1.0f
+            edtHeatNo.alpha = 1.0f
+            txtModeSelectionMessage.visibility = android.view.View.GONE
+        }
+
         // Function to reset button states
         fun resetButtonStates() {
             btnNhapHang.setBackgroundResource(android.R.drawable.btn_default)
             btnXuatHangTop.setBackgroundResource(android.R.drawable.btn_default)
             isNhapHangModeSelected = false
             isXuatHangModeSelected = false
+            disableFieldsUntilModeSelected()
         }
 
         // Function to reset material type button states
@@ -285,12 +318,16 @@ class MaterialLogActivity : AppCompatActivity() {
             // Clear any dynamic buttons
             layoutHeatInfoButtons.removeAllViews()
 
-            // Clear heat number field
+            // Clear heat number and production order fields
             edtHeatNo.setText("")
+            edtProductionOrder.setText("")
 
             // PRESERVED: Staff input (edtStaffNo and txtStaffInfo) are NOT cleared
             // This allows the staff number to survive mode switching
         }
+
+        // Initially disable fields until mode is selected
+        disableFieldsUntilModeSelected()
 
         // Nhập phôi button click listener
         btnNhapHang.setOnClickListener {
@@ -298,6 +335,7 @@ class MaterialLogActivity : AppCompatActivity() {
             clearAllFields()
             isNhapHangModeSelected = true
             btnNhapHang.setBackgroundResource(R.drawable.button_activated_background)
+            enableFieldsAfterModeSelected()
         }
 
         // Xuất phôi button click listener
@@ -306,6 +344,7 @@ class MaterialLogActivity : AppCompatActivity() {
             clearAllFields()
             isXuatHangModeSelected = true
             btnXuatHangTop.setBackgroundResource(R.drawable.button_activated_background)
+            enableFieldsAfterModeSelected()
         }
 
         // Staff number focus change listener
@@ -350,6 +389,62 @@ class MaterialLogActivity : AppCompatActivity() {
                     txtStaffInfo.text = ""
                     // Clear saved staff data if field is emptied
                     staffPreferences.clearStaffPreferences()
+                }
+            }
+        }
+
+        // Production Order focus change listener
+        edtProductionOrder.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val proOrdNoStr = edtProductionOrder.text.toString().trim()
+                // Clear previous HeatNo buttons when Production Order changes
+                layoutHeatInfoButtons.removeAllViews()
+
+                if (proOrdNoStr.isNotEmpty()) {
+                    txtHeatInfo.text = getString(R.string.loading)
+                    txtHeatInfo.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+
+                    lifecycleScope.launch {
+                        try {
+                            val response = getHeatNoApi.getHeatNo(proOrdNoStr)
+                            if (response != null && !response.heatNo.isNullOrEmpty()) {
+                                val heatNo = response.heatNo!!
+                                txtHeatInfo.text = ""
+
+                                // Create clickable HeatNo button
+                                val heatNoButton = Button(this@MaterialLogActivity).apply {
+                                    text = "HeatNo: $heatNo"
+                                    setBackgroundResource(R.drawable.clickable_button_background)
+                                    setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.WRAP_CONTENT
+                                    ).apply {
+                                        setMargins(0, 0, 0, 8)
+                                    }
+
+                                    setOnClickListener {
+                                        // Populate HeatNo field when button is clicked
+                                        edtHeatNo.setText(heatNo)
+                                        // Trigger HeatNo processing by simulating focus loss
+                                        edtHeatNo.clearFocus()
+                                        edtHeatNo.requestFocus()
+                                        edtHeatNo.clearFocus()
+                                    }
+                                }
+
+                                layoutHeatInfoButtons.addView(heatNoButton)
+                            } else {
+                                txtHeatInfo.text = getString(R.string.data_not_found)
+                                txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                            }
+                        } catch (_: Exception) {
+                            txtHeatInfo.text = getString(R.string.data_not_found)
+                            txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                        }
+                    }
+                } else {
+                    txtHeatInfo.text = ""
                 }
             }
         }

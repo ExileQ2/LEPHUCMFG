@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 34
         versionCode = 2        // Increment this
-        versionName = "1.0.1"  // Update to match what API expects
+        versionName = "1.0.2"  // Update to match what API expects
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
