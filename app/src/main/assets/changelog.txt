@@ -1,5 +1,6 @@
 CHANGELOG:
 LEPHUCMFG v1.3.0
+- (Mới) Cho phép lưu tên kĩ sư khi dùng phần mềm vào lần sau mà không cần nhập lại.
 - Cập nhật chế độ tự cập nhật phiên bản mới cho phần mềm.
 - Thêm hình nền giống MFG PC.
 - Thêm logo công ty vào phần mềm.
