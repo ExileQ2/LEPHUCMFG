@@ -1,4 +1,21 @@
 CHANGELOG:
+LEPHUCMFG v1.3.0
+- Cập nhật chế độ tự cập nhật phiên bản mới cho phần mềm.
+- Thêm hình nền giống MFG PC.
+- Thêm logo công ty vào phần mềm.
+>NHẬT KÝ MÁY:
+- Thêm tính năng scan QR focus cho list QR nhỏ.
+- Thêm tính năng lấy ảnh QR từ thư viện.
+- Thể hiện trạng thái máy chạy (bảo trì, đang chạy, vừa setup, lỗi...).
+- Sửa lỗi nhập đè dữ liệu khi kĩ sư quên thoát nhật ký máy.
+- Sửa lỗi cho phép nhập nhật ký máy khi máy đang được dùng bởi kĩ sư khác.
+- Thêm màu cho trạng thái máy.
+>NGUYÊN VẬT LIỆU - NVL (SẮP RA MẮT):
+- Thêm 2 tính năng chính: Nhập phôi và Xuất phôi.
+- Cập nhật tính toán/kích thước cho 3 loại phôi nhập chính: Tấm, cây, ống.
+- Cho phép nhập, xuất nhanh thông qua QR code hoặc/và lệnh sản xuất.
+- Cho phép lấy dữ liệu phôi, Heatno cụ thể từ LSX.
+- Tự động thêm phôi/khấu trừ phôi khi nhập/xuất.
 LEPHUCMFG v1.2.2
 - Tự động cập nhật Chi tiết công việc, LSX, Series, Ghi chú khi thoát máy.
 - Tự bôi đen Chi tiết công việc và LSX khi thoát máy.

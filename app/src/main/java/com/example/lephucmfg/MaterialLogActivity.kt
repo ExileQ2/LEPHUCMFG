@@ -92,9 +92,8 @@ class MaterialLogActivity : AppCompatActivity() {
     data class PostMUsingDto(
         @SerializedName("staffNo") val staffNo: Int,
         @SerializedName("matIID") val matIID: String,
-        @SerializedName("matQty") val matQty: Int,  // Changed from Float to Int
-        @SerializedName("partQty") val partQty: Int,
-        @SerializedName("jobNo") val jobNo: String,
+        @SerializedName("matQty") val matQty: Int,
+        @SerializedName("proOrdNo") val proOrdNo: String,
         @SerializedName("notes") val notes: String
     )
 
@@ -518,10 +517,6 @@ class MaterialLogActivity : AppCompatActivity() {
                                                 txtOldSize2.setTextColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
                                                 edtSize2.visibility = android.view.View.GONE
 
-                                                // Show job details field (Chi tiết công việc)
-                                                edtJobNo.hint = "Chi tiết công việc"
-                                                edtJobNo.visibility = android.view.View.VISIBLE
-
                                                 // Show material quantity with label above editable field
                                                 // Parse existQty from API response for consistency with "SL vật liệu"
                                                 txtMatQtyLabel.text = "Số lượng dùng:"
@@ -530,19 +525,15 @@ class MaterialLogActivity : AppCompatActivity() {
                                                 edtMatQty.visibility = android.view.View.VISIBLE
                                                 edtMatQty.setText(existQty)
 
-                                                // Show part quantity with label above editable field
-                                                // Parse qty from API response for consistency with "SL con hàng"
-                                                txtPartQtyLabel.text = "Số lượng con hàng:"
-                                                txtPartQtyLabel.visibility = android.view.View.VISIBLE
-                                                txtPartQtyLabel.setTextColor(ContextCompat.getColor(context, android.R.color.black))
-                                                edtPartQty.visibility = android.view.View.VISIBLE
-                                                edtPartQty.setText(qty)
-
                                                 // Show notes field
                                                 edtNotes.visibility = android.view.View.VISIBLE
 
+                                                // Hide job details and part quantity fields (no longer needed)
+                                                edtJobNo.visibility = android.view.View.GONE
+                                                txtPartQtyLabel.visibility = android.view.View.GONE
+                                                edtPartQty.visibility = android.view.View.GONE
 
-                                                // Hide product quantity and warehouse area fields
+                                                // Hide warehouse area field
                                                 edtWarehouseArea.visibility = android.view.View.GONE
 
                                                 // Show the "Cập nhật" button
@@ -724,9 +715,8 @@ class MaterialLogActivity : AppCompatActivity() {
             // Validate required fields for Xuất phôi mode
             if (isXuatHangModeSelected) {
                 val staffNoStr = edtStaffNo.text.toString().trim()
-                val jobNo = edtJobNo.text.toString().trim()
+                val proOrdNo = edtProductionOrder.text.toString().trim()
                 val materialQtyStr = edtMatQty.text.toString().trim()
-                val partQtyStr = edtPartQty.text.toString().trim()
                 val notes = edtNotes.text.toString().trim()
 
                 // Validation
@@ -740,8 +730,8 @@ class MaterialLogActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                if (jobNo.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập chi tiết công việc", android.widget.Toast.LENGTH_SHORT).show()
+                if (proOrdNo.isEmpty()) {
+                    android.widget.Toast.makeText(this, "Vui lòng nhập lệnh sản xuất", android.widget.Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
@@ -750,23 +740,16 @@ class MaterialLogActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                if (partQtyStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số lượng con hàng", android.widget.Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
                 try {
                     val staffNo = staffNoStr.toInt()
-                    val materialQty = materialQtyStr.toInt()  // Changed from toFloat() to toInt()
-                    val partQty = partQtyStr.toInt()
+                    val materialQty = materialQtyStr.toInt()
 
                     // Create POST data object
                     val postData = PostMUsingDto(
                         staffNo = staffNo,
                         matIID = selectedMatIID,
-                        matQty = materialQty,  // Now using Int instead of Float
-                        partQty = partQty,
-                        jobNo = jobNo,
+                        matQty = materialQty,
+                        proOrdNo = proOrdNo,
                         notes = notes
                     )
 
