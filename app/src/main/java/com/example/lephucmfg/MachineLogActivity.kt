@@ -292,9 +292,9 @@ class MachineLogActivity : AppCompatActivity() {
         val isShowingDamage = isMachineRunningVisible && machineRunningText == "Báo hư chờ sửa"
 
         val shouldBlockSubmit = (hasProcessingStatus && isShowingProcessingForOther) ||
-                               (hasMaintenanceStatus && isShowingMaintenance) ||
-                               (hasBeingSetupStatus && isShowingBeingSetup) ||
-                               (hasDamageStatus && isShowingDamage)
+                (hasMaintenanceStatus && isShowingMaintenance) ||
+                (hasBeingSetupStatus && isShowingBeingSetup) ||
+                (hasDamageStatus && isShowingDamage)
 
         if (shouldBlockSubmit) {
             btnSubmit.isEnabled = false
@@ -688,9 +688,9 @@ class MachineLogActivity : AppCompatActivity() {
             val serverError = "Không lấy được dữ liệu"
             val errorFields = listOf(txtStaffInfo, txtMachineInfo, txtSerialInfo)
             if (errorFields.any {
-                val text = it.text.toString()
-                text.contains(dataError, ignoreCase = true) || text.contains(serverError, ignoreCase = true)
-            }) {
+                    val text = it.text.toString()
+                    text.contains(dataError, ignoreCase = true) || text.contains(serverError, ignoreCase = true)
+                }) {
                 Toast.makeText(this, "Vui lòng kiểm tra lại thông tin", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }

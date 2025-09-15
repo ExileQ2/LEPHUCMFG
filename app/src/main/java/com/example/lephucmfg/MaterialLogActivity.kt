@@ -628,13 +628,13 @@ class MaterialLogActivity : AppCompatActivity() {
             btnTam.setBackgroundResource(R.drawable.button_activated_background)
 
             // Show TẤM specific fields
-            txtSizeALabel.text = "Nhập chiều rộng"
+            txtSizeALabel.text = "Nhập độ dày"
             txtSizeALabel.visibility = android.view.View.VISIBLE
             edtSizeA.hint = ""
             edtSizeA.setText("")
             edtSizeA.visibility = android.view.View.VISIBLE
 
-            txtSizeBLabel.text = "Nhập độ dày"
+            txtSizeBLabel.text = "Nhập chiều rộng"
             txtSizeBLabel.visibility = android.view.View.VISIBLE
             edtSizeB.hint = ""
             edtSizeB.setText("")
