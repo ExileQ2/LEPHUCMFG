@@ -5,15 +5,14 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
-import com.example.lephucmfg.utils.LoadingStates
 import com.example.lephucmfg.utils.StaffPreferences
 import com.google.gson.annotations.SerializedName
-import com.google.zxing.integration.android.IntentIntegrator
 import kotlinx.coroutines.launch
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -47,6 +46,12 @@ class MaterialLogActivity : AppCompatActivity() {
         suspend fun getInputMaterial(@Path("HeatNo") heatNo: String): List<InputMaterialInfo>?
     }
 
+    // --- API interface for fetching MLSX info from Production Order ---
+    interface GetInfoMLSXApi {
+        @GET("/api/GetInfoMLSX/{proOrdNo}")
+        suspend fun getInfoMLSX(@Path("proOrdNo") proOrdNo: String): List<GetInfoMLSXResponse>?
+    }
+
     // --- API interface for posting material usage ---
     interface PostMUsingApi {
         @retrofit2.http.POST("/api/PostMUsing")
@@ -69,6 +74,13 @@ class MaterialLogActivity : AppCompatActivity() {
     // --- Data class for GetHeatNo response ---
     data class GetHeatNoResponse(
         @SerializedName("heatNo") val heatNo: String?
+    )
+
+    // --- Data class for GetInfoMLSX response ---
+    data class GetInfoMLSXResponse(
+        @SerializedName("matUID") val matUID: String?,
+        @SerializedName("heatNo") val heatNo: String?,
+        @SerializedName("material") val material: String?
     )
 
     // --- Data class for heat number info ---
@@ -106,7 +118,7 @@ class MaterialLogActivity : AppCompatActivity() {
     data class PostMInputDto(
         @SerializedName("staffNo") val staffNo: Int,
         @SerializedName("heatNo") val heatNo: String,
-        @SerializedName("materialType") val materialType: String,
+        @SerializedName("matUID") val matUID: String, // Changed from materialType to matUID
         @SerializedName("newInpSize1") val newInpSize1: String,
         @SerializedName("newInpSize2") val newInpSize2: String,
         @SerializedName("warehouseArea") val warehouseArea: String,
@@ -195,6 +207,7 @@ class MaterialLogActivity : AppCompatActivity() {
         val inputMaterialApi = RetrofitClient.retrofitPublic.create(InputMaterialApi::class.java)
         val postMUsingApi = RetrofitClient.retrofitPublic.create(PostMUsingApi::class.java)
         val postMInputApi = RetrofitClient.retrofitPublic.create(PostMInputApi::class.java)
+        val getInfoMLSXApi = RetrofitClient.retrofitPublic.create(GetInfoMLSXApi::class.java)
 
         // --- QR Scan integration ---
         val editFields = mapOf(
@@ -405,37 +418,75 @@ class MaterialLogActivity : AppCompatActivity() {
 
                     lifecycleScope.launch {
                         try {
-                            val response = getHeatNoApi.getHeatNo(proOrdNoStr)
-                            if (response != null && !response.heatNo.isNullOrEmpty()) {
-                                val heatNo = response.heatNo!!
-                                txtHeatInfo.text = ""
+                            if (isNhapHangModeSelected) {
+                                // For Nhập phôi mode - call GetInfoMLSX API
+                                val response = getInfoMLSXApi.getInfoMLSX(proOrdNoStr)
+                                if (response != null && response.isNotEmpty()) {
+                                    val firstItem = response[0] // Get the first item from the array
+                                    val heatNo = firstItem.heatNo ?: ""
+                                    val material = firstItem.material ?: ""
+                                    val matUID = firstItem.matUID ?: ""
 
-                                // Create clickable HeatNo button
-                                val heatNoButton = Button(this@MaterialLogActivity).apply {
-                                    text = "HeatNo: $heatNo"
-                                    setBackgroundResource(R.drawable.clickable_button_background)
-                                    setTextColor(ContextCompat.getColor(context, android.R.color.white))
-                                    layoutParams = LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT
-                                    ).apply {
-                                        setMargins(0, 0, 0, 8)
-                                    }
+                                    if (heatNo.isNotEmpty()) {
+                                        // Store the actual material name for display
+                                        actualMaterialName = material
+                                        // Store matUID for POST
+                                        selectedMatIID = matUID
 
-                                    setOnClickListener {
-                                        // Populate HeatNo field when button is clicked
+                                        // Auto-fill HeatNo field directly (no button needed since it's unique)
                                         edtHeatNo.setText(heatNo)
-                                        // Trigger HeatNo processing by simulating focus loss
-                                        edtHeatNo.clearFocus()
-                                        edtHeatNo.requestFocus()
-                                        edtHeatNo.clearFocus()
-                                    }
-                                }
 
-                                layoutHeatInfoButtons.addView(heatNoButton)
+                                        // Show material info immediately with new format
+                                        txtSelectedMaterial.text = "Tên vật liệu: $material, mã: $matUID"
+                                        txtSelectedMaterial.visibility = android.view.View.VISIBLE
+                                        txtSelectedMaterial.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+
+                                        // Show material type selection buttons for Nhập phôi mode
+                                        layoutMaterialTypeButtons.visibility = android.view.View.VISIBLE
+
+                                        txtHeatInfo.text = ""
+                                    } else {
+                                        txtHeatInfo.text = getString(R.string.data_not_found)
+                                        txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                    }
+                                } else {
+                                    txtHeatInfo.text = getString(R.string.data_not_found)
+                                    txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                }
                             } else {
-                                txtHeatInfo.text = getString(R.string.data_not_found)
-                                txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                // For Xuất phôi mode - use existing GetHeatNo API
+                                val response = getHeatNoApi.getHeatNo(proOrdNoStr)
+                                if (response != null && !response.heatNo.isNullOrEmpty()) {
+                                    val heatNo = response.heatNo!!
+                                    txtHeatInfo.text = ""
+
+                                    // Create clickable HeatNo button
+                                    val heatNoButton = Button(this@MaterialLogActivity).apply {
+                                        text = "HeatNo: $heatNo"
+                                        setBackgroundResource(R.drawable.clickable_button_background)
+                                        setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                                        layoutParams = LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT
+                                        ).apply {
+                                            setMargins(0, 0, 0, 8)
+                                        }
+
+                                        setOnClickListener {
+                                            // Populate HeatNo field when button is clicked
+                                            edtHeatNo.setText(heatNo)
+                                            // Trigger HeatNo processing by simulating focus loss
+                                            edtHeatNo.clearFocus()
+                                            edtHeatNo.requestFocus()
+                                            edtHeatNo.clearFocus()
+                                        }
+                                    }
+
+                                    layoutHeatInfoButtons.addView(heatNoButton)
+                                } else {
+                                    txtHeatInfo.text = getString(R.string.data_not_found)
+                                    txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
+                                }
                             }
                         } catch (_: Exception) {
                             txtHeatInfo.text = getString(R.string.data_not_found)
@@ -553,46 +604,8 @@ class MaterialLogActivity : AppCompatActivity() {
                             }
                         }
                     } else if (isNhapHangModeSelected) {
-                        // For Nhập phôi mode - call GetInputMaterial API and show form for new material input
-                        txtHeatInfo.text = getString(R.string.loading)
-                        txtHeatInfo.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-
-                        lifecycleScope.launch {
-                            try {
-                                val inputMaterialList = inputMaterialApi.getInputMaterial(heatNoStr)
-                                if (inputMaterialList != null && inputMaterialList.isNotEmpty()) {
-                                    val firstMaterial = inputMaterialList[0]
-                                    val material = firstMaterial.material ?: ""
-                                    val matPONo = firstMaterial.matPONo ?: ""
-
-                                    // Store the actual material name for POST API
-                                    actualMaterialName = material
-
-                                    // Show material name field with API data
-                                    txtSelectedMaterial.text = "Tên vật liệu: $material, P.O: $matPONo"
-                                    txtSelectedMaterial.visibility = android.view.View.VISIBLE
-                                    txtSelectedMaterial.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
-
-                                    txtHeatInfo.text = ""
-                                } else {
-                                    // No data found, show default
-                                    actualMaterialName = ""
-                                    txtSelectedMaterial.text = "Tên vật liệu: chưa có"
-                                    txtSelectedMaterial.visibility = android.view.View.VISIBLE
-                                    txtSelectedMaterial.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
-
-                                    txtHeatInfo.text = ""
-                                }
-                            } catch (_: Exception) {
-                                // API call failed, show default
-                                actualMaterialName = ""
-                                txtSelectedMaterial.text = "Tên vật liệu: chưa có"
-                                txtSelectedMaterial.visibility = android.view.View.VISIBLE
-                                txtSelectedMaterial.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
-
-                                txtHeatInfo.text = ""
-                            }
-                        }
+                        // For Nhập phôi mode - no need to call GetInputMaterial API anymore
+                        // Material info is already obtained from Production Order via GetInfoMLSX
 
                         // Show material type selection buttons for Nhập phôi mode
                         layoutMaterialTypeButtons.visibility = android.view.View.VISIBLE
@@ -721,22 +734,22 @@ class MaterialLogActivity : AppCompatActivity() {
 
                 // Validation
                 if (staffNoStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số thợ", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số thợ", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (selectedMatIID.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng chọn vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng chọn vật liệu", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (proOrdNo.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập lệnh sản xuất", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập lệnh sản xuất", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (materialQtyStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số lượng vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số lượng vật liệu", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
@@ -768,7 +781,7 @@ class MaterialLogActivity : AppCompatActivity() {
                                     // Success - show response message
                                     val successMessage = "Thành công!\n${responseBody.message}"
 
-                                    android.widget.Toast.makeText(this@MaterialLogActivity, successMessage, android.widget.Toast.LENGTH_LONG).show()
+                                    Toast.makeText(this@MaterialLogActivity, successMessage, Toast.LENGTH_LONG).show()
 
                                     // Clear form after successful submission
                                     clearAllFields()
@@ -778,7 +791,7 @@ class MaterialLogActivity : AppCompatActivity() {
                                     txtStaffInfo.text = ""
                                     selectedMatIID = ""
                                 } else {
-                                    android.widget.Toast.makeText(this@MaterialLogActivity, "Không có dữ liệu trả về", android.widget.Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MaterialLogActivity, "Không có dữ liệu trả về", Toast.LENGTH_SHORT).show()
                                 }
                             } else {
                                 // Handle API error response - show more detailed error info
@@ -790,11 +803,11 @@ class MaterialLogActivity : AppCompatActivity() {
                                 }
 
                                 android.util.Log.e("MaterialLogActivity", "HTTP Error $httpCode: $errorMessage")
-                                android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi HTTP $httpCode: $errorMessage", android.widget.Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@MaterialLogActivity, "Lỗi HTTP $httpCode: $errorMessage", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
                             // Handle network or other errors
-                            android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi kết nối: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MaterialLogActivity, "Lỗi kết nối: ${e.message}", Toast.LENGTH_LONG).show()
                             android.util.Log.e("MaterialLogActivity", "POST request failed", e)
                         } finally {
                             // Reset button state
@@ -804,38 +817,38 @@ class MaterialLogActivity : AppCompatActivity() {
                     }
 
                 } catch (e: NumberFormatException) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số hợp lệ", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số hợp lệ", Toast.LENGTH_SHORT).show()
                 }
             } else if (isNhapHangModeSelected) {
                 // Validate and submit for Nhập phôi mode
                 val staffNoStr = edtStaffNo.text.toString().trim()
                 val heatNoStr = edtHeatNo.text.toString().trim()
                 val warehouseAreaStr = edtWarehouseArea.text.toString().trim()
-                val matQtyStr = edtMatQtyInput.text.toString().trim()  // Fixed: Use edtMatQtyInput instead of edtMatQty
+                val matQtyStr = edtMatQtyInput.text.toString().trim()
 
                 // Validation
                 if (staffNoStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số thợ", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số thợ", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (heatNoStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập Heat Number", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập Heat Number", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (selectedMaterialType.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng chọn loại vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng chọn loại vật liệu", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (warehouseAreaStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập khu vực kho", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập khu vực kho", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 if (matQtyStr.isEmpty()) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số lượng vật liệu", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số lượng vật liệu", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
@@ -847,9 +860,9 @@ class MaterialLogActivity : AppCompatActivity() {
 
                     return when (selectedMaterialType) {
                         "TẤM" -> {
-                            // For TẤM: newInpSize1 = chiều rộng, newInpSize2 = độ dày*chiều dài
-                            val newInpSize1 = sizeA // chiều rộng
-                            val newInpSize2 = "${sizeB}*${sizeC}" // độ dày*chiều dài
+                            // For TẤM: newInpSize1 = độ dày, newInpSize2 = chiều rộng*chiều dài
+                            val newInpSize1 = sizeA // độ dày
+                            val newInpSize2 = "${sizeB}*${sizeC}" // chiều rộng*chiều dài
                             Pair(newInpSize1, newInpSize2)
                         }
                         "CÂY" -> {
@@ -870,14 +883,14 @@ class MaterialLogActivity : AppCompatActivity() {
 
                 try {
                     val staffNo = staffNoStr.toInt()
-                    val matQty = matQtyStr.toInt()  // Changed from toFloat() to toInt()
+                    val matQty = matQtyStr.toInt()
                     val (newInpSize1, newInpSize2) = convertSizesToInpSizes()
 
                     // Create POST data object for material input using the correct API structure
                     val postData = PostMInputDto(
                         staffNo = staffNo,
                         heatNo = heatNoStr,
-                        materialType = actualMaterialName, // Use actual material name from GetInputMaterial API
+                        matUID = selectedMatIID, // Use matUID from GetInfoMLSX API
                         newInpSize1 = newInpSize1,
                         newInpSize2 = newInpSize2,
                         warehouseArea = warehouseAreaStr,
@@ -898,7 +911,7 @@ class MaterialLogActivity : AppCompatActivity() {
                                 if (responseBody != null) {
                                     // Success - show response message
                                     val successMessage = "Nhập phôi thành công!\n${responseBody.message}"
-                                    android.widget.Toast.makeText(this@MaterialLogActivity, successMessage, android.widget.Toast.LENGTH_LONG).show()
+                                    Toast.makeText(this@MaterialLogActivity, successMessage, Toast.LENGTH_LONG).show()
 
                                     // Clear form after successful submission
                                     clearAllFields()
@@ -908,7 +921,7 @@ class MaterialLogActivity : AppCompatActivity() {
                                     txtStaffInfo.text = ""
                                     selectedMatIID = ""
                                 } else {
-                                    android.widget.Toast.makeText(this@MaterialLogActivity, "Không có dữ liệu trả về", android.widget.Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MaterialLogActivity, "Không có dữ liệu trả về", Toast.LENGTH_SHORT).show()
                                 }
                             } else {
                                 // Handle API error response - show more detailed error info
@@ -920,11 +933,11 @@ class MaterialLogActivity : AppCompatActivity() {
                                 }
 
                                 android.util.Log.e("MaterialLogActivity", "HTTP Error $httpCode: $errorMessage")
-                                android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi HTTP $httpCode: $errorMessage", android.widget.Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@MaterialLogActivity, "Lỗi HTTP $httpCode: $errorMessage", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
                             // Handle network or other errors
-                            android.widget.Toast.makeText(this@MaterialLogActivity, "Lỗi kết nối: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MaterialLogActivity, "Lỗi kết nối: ${e.message}", Toast.LENGTH_LONG).show()
                             android.util.Log.e("MaterialLogActivity", "POST request failed", e)
                         } finally {
                             // Reset button state
@@ -934,7 +947,7 @@ class MaterialLogActivity : AppCompatActivity() {
                     }
 
                 } catch (e: NumberFormatException) {
-                    android.widget.Toast.makeText(this, "Vui lòng nhập số hợp lệ", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Vui lòng nhập số hợp lệ", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -943,7 +956,6 @@ class MaterialLogActivity : AppCompatActivity() {
     // Auto-call staff API with saved staff number
     private fun autoCallStaffApi(staffNo: Int) {
         val txtStaffInfo = findViewById<TextView>(R.id.txtStaffInfo)
-        val edtStaffNo = findViewById<EditText>(R.id.edtStaffNo)
         val staffApi = RetrofitClient.retrofitPublic.create(StaffApi::class.java)
 
         txtStaffInfo.text = getString(R.string.loading)
