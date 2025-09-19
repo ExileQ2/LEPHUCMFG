@@ -48,8 +48,8 @@ class MaterialLogActivity : AppCompatActivity() {
 
     // --- API interface for fetching MLSX info from Production Order ---
     interface GetInfoMLSXApi {
-        @GET("/api/GetInfoMLSX/{proOrdNo}")
-        suspend fun getInfoMLSX(@Path("proOrdNo") proOrdNo: String): List<GetInfoMLSXResponse>?
+        @GET("/api/GetInfoMLSX/{ProOrdNo}")
+        suspend fun getInfoMLSX(@Path("ProOrdNo") proOrdNo: String): GetInfoMLSXResponse?
     }
 
     // --- API interface for posting material usage ---
@@ -421,32 +421,27 @@ class MaterialLogActivity : AppCompatActivity() {
                             if (isNhapHangModeSelected) {
                                 // For Nhập phôi mode - call GetInfoMLSX API
                                 val response = getInfoMLSXApi.getInfoMLSX(proOrdNoStr)
-                                if (response != null && response.isNotEmpty()) {
-                                    val firstItem = response[0] // Get the first item from the array
-                                    val heatNo = firstItem.heatNo ?: ""
-                                    val material = firstItem.material ?: ""
-                                    val matUID = firstItem.matUID ?: ""
+                                if (response != null) {
+                                    val item = response
+                                    val heatNo = item.heatNo ?: ""
+                                    val material = item.material ?: ""
+                                    val matUID = item.matUID ?: ""
 
-                                    if (heatNo.isNotEmpty()) {
-                                        // Store the actual material name for display
+                                    if (heatNo.isNotEmpty() && material.isNotEmpty() && matUID.isNotEmpty()) {
                                         actualMaterialName = material
-                                        // Store matUID for POST
                                         selectedMatIID = matUID
-
-                                        // Auto-fill HeatNo field directly (no button needed since it's unique)
                                         edtHeatNo.setText(heatNo)
-
-                                        // Show material info immediately with new format
                                         txtSelectedMaterial.text = "Tên vật liệu: $material, mã: $matUID"
                                         txtSelectedMaterial.visibility = android.view.View.VISIBLE
                                         txtSelectedMaterial.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
-
-                                        // Show material type selection buttons for Nhập phôi mode
                                         layoutMaterialTypeButtons.visibility = android.view.View.VISIBLE
-
                                         txtHeatInfo.text = ""
                                     } else {
-                                        txtHeatInfo.text = getString(R.string.data_not_found)
+                                        val missingFields = mutableListOf<String>()
+                                        if (heatNo.isEmpty()) missingFields.add("heatNo")
+                                        if (material.isEmpty()) missingFields.add("material")
+                                        if (matUID.isEmpty()) missingFields.add("matUID")
+                                        txtHeatInfo.text = "Thiếu dữ liệu: ${missingFields.joinToString(", ")}"
                                         txtHeatInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
                                     }
                                 } else {
