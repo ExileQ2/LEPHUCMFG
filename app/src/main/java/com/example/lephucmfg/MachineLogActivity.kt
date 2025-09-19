@@ -276,12 +276,24 @@ class MachineLogActivity : AppCompatActivity() {
         val btnSubmit = findViewById<Button>(R.id.btnSubmit)
         val txtMachineInfo = findViewById<TextView>(R.id.txtMachineInfo)
         val txtMachineRunning = findViewById<TextView>(R.id.txtMachineRunning)
+        val edtMcName = findViewById<EditText>(R.id.edtMcName)
 
         val machineInfoText = txtMachineInfo.text.toString()
         val machineRunningText = txtMachineRunning.text.toString()
         val isMachineRunningVisible = txtMachineRunning.visibility == View.VISIBLE
+        val mcName = edtMcName.text.toString().trim()
 
-        // Check conditions that should block submit
+        // Exception for machine numbers 1-13 (always keep submit button enabled)
+        val isCustomizedRepairMachine = mcName in listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13")
+
+        if (isCustomizedRepairMachine) {
+            // Always enable submit for machines 1-13, even if "Đang gia công"
+            btnSubmit.isEnabled = true
+            btnSubmit.alpha = 1.0f
+            return
+        }
+
+        // Check conditions that should block submit for other machines
         val hasProcessingStatus = machineInfoText.contains("Status: Processing", ignoreCase = true)
         val isShowingProcessingForOther = isMachineRunningVisible && machineRunningText == "Đang gia công"
         val hasMaintenanceStatus = machineInfoText.contains("Status: Maintenance", ignoreCase = true)

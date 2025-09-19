@@ -12,6 +12,7 @@ LEPHUCMFG v1.3.1
 - Thêm hình nền giống MFG PC.
 - Thêm logo công ty vào phần mềm.
 >NHẬT KÝ MÁY:
+- Cho phép nhập nhật ký máy linh hoạt theo mã LINH TINH, DO GA.
 - Thêm tính năng scan QR focus cho list QR nhỏ.
 - Thêm tính năng lấy ảnh QR từ thư viện.
 - Thể hiện trạng thái máy chạy (bảo trì, đang chạy, vừa setup, lỗi...).
