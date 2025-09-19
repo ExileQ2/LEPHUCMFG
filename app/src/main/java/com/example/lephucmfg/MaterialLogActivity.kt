@@ -18,6 +18,9 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 
 class MaterialLogActivity : AppCompatActivity() {
+    private lateinit var btnTam: Button
+    private lateinit var btnCay: Button
+    private lateinit var btnOng: Button
 
     // Add StaffPreferences instance
     private lateinit var staffPreferences: StaffPreferences
@@ -133,6 +136,9 @@ class MaterialLogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_material_log)
+        btnTam = findViewById(R.id.btnTam)
+        btnCay = findViewById(R.id.btnCay)
+        btnOng = findViewById(R.id.btnOng)
 
         // Initialize StaffPreferences
         staffPreferences = StaffPreferences(this)
@@ -163,9 +169,6 @@ class MaterialLogActivity : AppCompatActivity() {
 
         // New material type selection UI elements
         val layoutMaterialTypeButtons = findViewById<LinearLayout>(R.id.layoutMaterialTypeButtons)
-        val btnTam = findViewById<Button>(R.id.btnTam)
-        val btnCay = findViewById<Button>(R.id.btnCay)
-        val btnOng = findViewById<Button>(R.id.btnOng)
 
         // New size input fields
         val txtSizeALabel = findViewById<TextView>(R.id.txtSizeALabel)
@@ -620,8 +623,8 @@ class MaterialLogActivity : AppCompatActivity() {
                         txtPartQtyLabel.visibility = android.view.View.GONE
                         edtPartQty.visibility = android.view.View.GONE
                         edtNotes.visibility = android.view.View.GONE
-                        edtWarehouseArea.visibility = android.view.View.GONE
-                        btnXuatHang.visibility = android.view.View.GONE
+                        // Do NOT hide edtWarehouseArea here; only hide on mode switch
+                        // edtWarehouseArea.visibility = android.view.View.GONE
                     }
                 } else {
                     txtHeatInfo.text = ""
@@ -633,7 +636,8 @@ class MaterialLogActivity : AppCompatActivity() {
         btnTam.setOnClickListener {
             resetMaterialTypeButtons()
             selectedMaterialType = "TẤM"
-            btnTam.setBackgroundResource(R.drawable.button_activated_background)
+            setActiveMaterialTypeButton(btnTam)
+            btnXuatHang.visibility = android.view.View.VISIBLE
 
             // Show TẤM specific fields
             txtSizeALabel.text = "Nhập độ dày"
@@ -663,7 +667,8 @@ class MaterialLogActivity : AppCompatActivity() {
         btnCay.setOnClickListener {
             resetMaterialTypeButtons()
             selectedMaterialType = "CÂY"
-            btnCay.setBackgroundResource(R.drawable.button_activated_background)
+            setActiveMaterialTypeButton(btnCay)
+            btnXuatHang.visibility = android.view.View.VISIBLE
 
             // Show CÂY specific fields
             txtSizeALabel.text = "Nhập đường kính"
@@ -691,7 +696,8 @@ class MaterialLogActivity : AppCompatActivity() {
         btnOng.setOnClickListener {
             resetMaterialTypeButtons()
             selectedMaterialType = "ỐNG"
-            btnOng.setBackgroundResource(R.drawable.button_activated_background)
+            setActiveMaterialTypeButton(btnOng)
+            btnXuatHang.visibility = android.view.View.VISIBLE
 
             // Show ỐNG specific fields
             txtSizeALabel.text = "Nhập đường kính ngoài"
@@ -971,5 +977,13 @@ class MaterialLogActivity : AppCompatActivity() {
                 txtStaffInfo.setTextColor(ContextCompat.getColor(this@MaterialLogActivity, android.R.color.holo_red_dark))
             }
         }
+    }
+
+    // Helper function to set active material type button
+    fun setActiveMaterialTypeButton(activeButton: Button) {
+        btnTam.setBackgroundResource(android.R.drawable.btn_default)
+        btnCay.setBackgroundResource(android.R.drawable.btn_default)
+        btnOng.setBackgroundResource(android.R.drawable.btn_default)
+        activeButton.setBackgroundResource(R.drawable.button_activated_background)
     }
 }
