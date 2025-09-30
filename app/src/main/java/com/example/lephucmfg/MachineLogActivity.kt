@@ -230,7 +230,18 @@ class MachineLogActivity : AppCompatActivity() {
             }
             machineStatus?.contains("Status: Processing", ignoreCase = true) == true -> {
                 txtMachineRunning.visibility = View.VISIBLE
-                txtMachineRunning.text = "Đang gia công"
+                // Determine if machine is in exempt list (001-013) to allow override ('nhập đè')
+                val mcNameCurrent = edtMcName.text.toString().trim()
+                val paddedExceptionSet = setOf(
+                    "001","002","003","004","005","006","007","008","009","010","011","012","013"
+                )
+                val normalizedNumber = mcNameCurrent.trimStart('0').ifEmpty { "0" }
+                val machineNumberInt = normalizedNumber.toIntOrNull()
+                val isCustomizedRepairMachine = mcNameCurrent in paddedExceptionSet || (machineNumberInt != null && machineNumberInt in 1..13)
+                val baseText = "Đang gia công"
+                txtMachineRunning.text = if (isCustomizedRepairMachine) {
+                    "$baseText. Có thể nhập đè trên máy này."
+                } else baseText
                 txtMachineRunning.setTextColor(resources.getColor(android.R.color.holo_green_dark))
                 txtMachineRunning.setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutSmallEdits.visibility = View.GONE
@@ -283,11 +294,17 @@ class MachineLogActivity : AppCompatActivity() {
         val isMachineRunningVisible = txtMachineRunning.visibility == View.VISIBLE
         val mcName = edtMcName.text.toString().trim()
 
-        // Exception for machine numbers 1-13 (always keep submit button enabled)
-        val isCustomizedRepairMachine = mcName in listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13")
+        // Exception for machine numbers 001-013 (always keep submit button enabled)
+        // We accept both zero-padded ("001".."013") and unpadded ("1".."13") just in case.
+        val paddedExceptionSet = setOf(
+            "001","002","003","004","005","006","007","008","009","010","011","012","013"
+        )
+        val normalizedNumber = mcName.trimStart('0').ifEmpty { "0" } // "006" -> "6", "000" -> "0"
+        val machineNumberInt = normalizedNumber.toIntOrNull()
+        val isCustomizedRepairMachine = mcName in paddedExceptionSet || (machineNumberInt != null && machineNumberInt in 1..13)
 
         if (isCustomizedRepairMachine) {
-            // Always enable submit for machines 1-13, even if "Đang gia công"
+            // Always enable submit for machines 001-013, even if running/processing states
             btnSubmit.isEnabled = true
             btnSubmit.alpha = 1.0f
             return
