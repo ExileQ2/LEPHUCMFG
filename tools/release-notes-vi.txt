@@ -1,1 +1,1 @@
-Đồ gá hiện và gửi đầy đủ số lượng Đạt, Hỏng, Làm lại. Mã máy tự tra cứu khi đủ 3 số; nút tự khóa trong lúc gửi; xác nhận rõ thông tin trước khi thoát máy; gửi xong force về trang chủ.
+Đồ gá nhập đủ Đạt, Hỏng và Làm lại. Mã máy tự tra cứu khi đủ 3 số. Thoát máy có xác nhận. Gửi xong về trang chủ.

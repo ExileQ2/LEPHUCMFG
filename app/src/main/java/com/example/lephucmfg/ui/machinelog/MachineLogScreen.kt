@@ -147,7 +147,7 @@ fun MachineLogScreen(
             }
 
             if (state.banner.isNotBlank()) {
-                item { StatusBanner(state.banner, state.submitBlocked) }
+                item { StatusBanner(state.banner, state.lockWorkFields) }
             }
 
             item {
@@ -192,9 +192,7 @@ fun MachineLogScreen(
                 }
             }
 
-            if (state.isJigJob) {
-                item { HintText("Đồ gá: không cần Routing, lệnh sản xuất hoặc serial.") }
-            } else if (state.productionOrders.isNotEmpty()) {
+            if (!state.isJigJob && state.productionOrders.isNotEmpty()) {
                 item {
                     Text("Lệnh sản xuất", style = MaterialTheme.typography.labelMedium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -208,7 +206,7 @@ fun MachineLogScreen(
                         }
                     }
                 }
-            } else {
+            } else if (!state.isJigJob) {
                 item {
                     LabeledScanField(
                         label = "Lệnh sản xuất",
@@ -285,12 +283,7 @@ fun MachineLogScreen(
                     if (state.submitting) CircularProgressIndicator(modifier = Modifier.width(22.dp), strokeWidth = 2.dp)
                     else Text(if (state.hasActiveProcess) "KẾT THÚC CÔNG VIỆC" else "BẮT ĐẦU CÔNG VIỆC")
                 }
-                if (state.submitBlocked && !state.loading) {
-                    HintText(
-                        if (state.isJigJob) "Điền đủ nhân viên, máy và Job; máy đang bận vẫn tự khóa như trước."
-                        else "Điền đủ nhân viên, máy, Job và lệnh sản xuất; máy đang bận sẽ tự khóa."
-                    )
-                }
+                state.submitHint.takeIf(String::isNotBlank)?.let { HintText(it) }
                 Spacer(Modifier.height(18.dp))
             }
         }
@@ -334,8 +327,7 @@ fun MachineLogScreen(
         }
         AlertDialog(
             onDismissRequest = returnHome,
-            title = { Text("Cập nhật thành công") },
-            text = { Text("Nhật ký máy đã được lưu. Ứng dụng sẽ quay về trang chủ để tránh gửi trùng.") },
+            title = { Text("Đã lưu thành công") },
             confirmButton = {
                 Button(onClick = returnHome) { Text("VỀ TRANG CHỦ") }
             }
@@ -361,18 +353,18 @@ private fun ExitWorkConfirmationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Xác nhận thoát máy ${state.machine}") },
+        title = { Text("Thoát máy ${state.machine}?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("$staffName đang chuẩn bị kết thúc công việc trên máy ${state.machine}.")
+                Text(staffName, fontWeight = FontWeight.SemiBold)
                 Text(workDescription, fontWeight = FontWeight.SemiBold)
-                if (serial.isNotBlank()) Text("Serial: $serial")
+                if (!state.isJigJob && serial.isNotBlank()) Text("Serial: $serial")
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { confirmed = !confirmed }
                 ) {
                     Checkbox(checked = confirmed, onCheckedChange = { confirmed = it })
-                    Text("Tôi xác nhận kết thúc công việc này")
+                    Text("Xác nhận thoát máy")
                 }
             }
         },
@@ -380,10 +372,10 @@ private fun ExitWorkConfirmationDialog(
             Button(
                 onClick = onConfirm,
                 enabled = confirmed && !state.submitting
-            ) { Text("XÁC NHẬN THOÁT MÁY") }
+            ) { Text("THOÁT MÁY") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !state.submitting) { Text("Ở LẠI") }
+            TextButton(onClick = onDismiss, enabled = !state.submitting) { Text("HỦY") }
         }
     )
 }
@@ -450,6 +442,17 @@ private fun Toggle(label: String, checked: Boolean, onChecked: (Boolean) -> Unit
 private fun HintText(text: String) {
     if (text.isNotBlank()) Text(text, style = MaterialTheme.typography.bodySmall, color = Color(0xFF52606D))
 }
+
+private val MachineLogUiState.submitHint: String
+    get() = when {
+        loading || submitting || !submitBlocked -> ""
+        staffNo.isBlank() -> "Nhập mã nhân viên"
+        machine.length < 3 -> "Nhập đủ 3 số mã máy"
+        lockWorkFields -> ""
+        job.isBlank() -> "Quét Job No"
+        !isJigJob && productionOrder.isBlank() -> "Chọn lệnh sản xuất"
+        else -> ""
+    }
 
 @Composable
 private fun StatusBanner(text: String, blocked: Boolean) {
@@ -539,7 +542,7 @@ private fun SerialDialog(
                         modifier = Modifier.fillMaxWidth().height(120.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("LSX này không có danh sách serial. Có thể quét hoặc nhập tay.")
+                        Text("Chưa có serial")
                     }
                 } else {
                     LazyVerticalGrid(

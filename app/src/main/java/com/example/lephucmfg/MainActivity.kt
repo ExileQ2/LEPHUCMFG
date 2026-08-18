@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
 
             textView.text = spannable
         } catch (e: IOException) {
-            textView.text = "Error loading changelog: ${e.message}"
+            textView.text = "Không tải được lịch sử cập nhật"
         }
     }
 }

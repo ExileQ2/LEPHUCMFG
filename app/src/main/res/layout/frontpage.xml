@@ -68,7 +68,7 @@
             android:id="@+id/txtChangeLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Loading changelog..."
+            android:text=""
             android:textColor="@android:color/black"
             android:textSize="11sp" />
     </ScrollView>
