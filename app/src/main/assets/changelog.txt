@@ -4,6 +4,7 @@ LEPHUCMFG v2.0.8
 - Hiện lại đầy đủ số lượng Đạt, Hỏng và Làm lại khi khai báo đồ gá.
 - Gửi cả ba số lượng lên máy chủ như công việc gia công bình thường.
 - Giữ nguyên luồng đồ gá không cần Routing, lệnh sản xuất hoặc serial.
+- Sau khi gửi thành công, hiện xác nhận rồi quay về trang chủ để tránh khai báo trùng.
 LEPHUCMFG v2.0.7
 >KHAI BÁO ĐỒ GÁ:
 - Quét Job bắt đầu bằng G sẽ tự lấy tên đồ gá và điền ghi chú "DO GA - ...".

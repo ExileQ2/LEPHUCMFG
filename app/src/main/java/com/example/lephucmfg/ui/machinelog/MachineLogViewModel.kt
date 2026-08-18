@@ -45,6 +45,7 @@ data class MachineLogUiState(
     val history: List<MachineLogHistoryItem> = emptyList(),
     val loading: Boolean = false,
     val submitting: Boolean = false,
+    val submitSuccess: Boolean = false,
     val message: String? = null
 ) {
     val hasActiveProcess: Boolean get() = !process?.processNo.isNullOrBlank()
@@ -91,6 +92,7 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
     fun setSetup(value: Boolean) = _state.update { it.copy(setup = value) }
     fun setRework(value: Boolean) = _state.update { it.copy(rework = value) }
     fun consumeMessage() = _state.update { it.copy(message = null) }
+    fun consumeSubmitSuccess() = _state.update { it.copy(submitSuccess = false) }
 
     fun lookupStaff() {
         val staff = state.value.staffNo.trim()
@@ -389,7 +391,7 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
                     staffNo = current.staffNo,
                     staffInfo = current.staffInfo,
                     history = repository.history(),
-                    message = "Đã lưu nhật ký máy"
+                    submitSuccess = true
                 )
             }.onFailure(::showError)
             _state.update { it.copy(submitting = false) }

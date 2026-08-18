@@ -308,6 +308,20 @@ fun MachineLogScreen(
     if (showHistory) {
         HistoryDialog(state.history) { showHistory = false }
     }
+    if (state.submitSuccess) {
+        val returnHome = {
+            viewModel.consumeSubmitSuccess()
+            onBack()
+        }
+        AlertDialog(
+            onDismissRequest = returnHome,
+            title = { Text("Cập nhật thành công") },
+            text = { Text("Nhật ký máy đã được lưu. Ứng dụng sẽ quay về trang chủ để tránh gửi trùng.") },
+            confirmButton = {
+                Button(onClick = returnHome) { Text("VỀ TRANG CHỦ") }
+            }
+        )
+    }
 }
 
 @Composable
