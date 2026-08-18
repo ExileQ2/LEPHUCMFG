@@ -108,6 +108,9 @@ object MachineLogLogic {
 
     fun routingLookupJob(jobNo: String): String = jobNo.trim().uppercase()
 
+    fun normalizeMachineCode(value: String): String =
+        value.filter(Char::isDigit).take(3)
+
     fun isJigJob(jobNo: String): Boolean {
         val clean = jobNo.trim().uppercase()
         return clean.length > 1 && clean.first() == 'G' && clean.drop(1).all(Char::isDigit)

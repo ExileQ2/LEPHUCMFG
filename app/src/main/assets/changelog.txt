@@ -5,6 +5,9 @@ LEPHUCMFG v2.0.8
 - Gửi cả ba số lượng lên máy chủ như công việc gia công bình thường.
 - Giữ nguyên luồng đồ gá không cần Routing, lệnh sản xuất hoặc serial.
 - Sau khi gửi thành công, hiện xác nhận rồi quay về trang chủ để tránh khai báo trùng.
+- Mã máy chỉ mở bàn phím số và tự tra cứu ngay khi nhập đủ 3 số.
+- Nút gửi tự khóa trong lúc đang xử lý; lưu xong force về trang chủ để tránh nhập đè.
+- Khi thoát máy, hiện người thực hiện, máy, đồ gá/công đoạn và serial; phải tích xác nhận mới gửi.
 LEPHUCMFG v2.0.7
 >KHAI BÁO ĐỒ GÁ:
 - Quét Job bắt đầu bằng G sẽ tự lấy tên đồ gá và điền ghi chú "DO GA - ...".

@@ -73,9 +73,21 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
     val state: StateFlow<MachineLogUiState> = _state.asStateFlow()
 
     private var lookupJob: Job? = null
+    private var submitJob: Job? = null
 
     fun setStaffNo(value: String) = _state.update { it.copy(staffNo = value.filter(Char::isDigit)) }
-    fun setMachine(value: String) = _state.update { it.copy(machine = value.trim().uppercase()) }
+    fun setMachine(value: String) {
+        val normalized = MachineLogLogic.normalizeMachineCode(value)
+        val changed = normalized != state.value.machine
+        _state.update {
+            it.copy(
+                machine = normalized,
+                machineInfo = if (changed) null else it.machineInfo,
+                process = if (changed) null else it.process
+            )
+        }
+        if (changed && normalized.length == MACHINE_CODE_LENGTH) lookupMachine(normalized)
+    }
     fun setJob(value: String) = _state.update {
         val normalized = value.trim().uppercase()
         it.copy(
@@ -108,14 +120,17 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun lookupMachine() {
-        val machine = state.value.machine.trim()
+    fun lookupMachine() = lookupMachine(state.value.machine)
+
+    private fun lookupMachine(machineCode: String) {
+        val machine = machineCode.trim()
         if (machine.isBlank()) {
             _state.update { it.copy(machineInfo = null, process = null) }
             return
         }
         launchLookup {
             val info = repository.getMachine(machine)
+            if (state.value.machine != machine) return@launchLookup
             _state.update { it.copy(machineInfo = info) }
             refreshProcessIfPossible()
         }
@@ -358,9 +373,9 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
 
     fun submit() {
         val current = state.value
-        if (current.submitBlocked) return
-        viewModelScope.launch {
-            _state.update { it.copy(submitting = true, message = null) }
+        if (current.submitBlocked || submitJob?.isActive == true) return
+        _state.update { it.copy(submitting = true, message = null) }
+        submitJob = viewModelScope.launch {
             runCatching {
                 val jigWork = current.isJigJob
                 val request = MachineLogRequest(
@@ -409,5 +424,9 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun showError(error: Throwable) {
         _state.update { it.copy(message = error.message?.take(180) ?: "Không lấy được dữ liệu") }
+    }
+
+    private companion object {
+        const val MACHINE_CODE_LENGTH = 3
     }
 }

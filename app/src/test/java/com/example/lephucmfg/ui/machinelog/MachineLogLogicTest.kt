@@ -8,6 +8,12 @@ import org.junit.Test
 class MachineLogLogicTest {
 
     @Test
+    fun machineCode_acceptsOnlyTheFirstThreeDigits() {
+        assertEquals("155", MachineLogLogic.normalizeMachineCode(" 15A5B9 "))
+        assertEquals("006", MachineLogLogic.normalizeMachineCode("006"))
+    }
+
+    @Test
     fun routing_keepsTheFullScannedJobAndOnlyReplacesAnExistingStep() {
         assertEquals("36786", MachineLogLogic.routingLookupJob(" 36786 "))
         assertEquals(

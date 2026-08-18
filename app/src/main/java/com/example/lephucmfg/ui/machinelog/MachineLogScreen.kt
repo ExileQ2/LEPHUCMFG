@@ -71,6 +71,7 @@ fun MachineLogScreen(
     var showRouting by remember { mutableStateOf(false) }
     var showSerials by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+    var showExitConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -88,6 +89,10 @@ fun MachineLogScreen(
             showRouting = false
             showSerials = false
         }
+    }
+
+    LaunchedEffect(state.hasActiveProcess) {
+        if (!state.hasActiveProcess) showExitConfirmation = false
     }
 
     Scaffold(
@@ -125,7 +130,8 @@ fun MachineLogScreen(
                     value = state.machine,
                     onValueChange = viewModel::setMachine,
                     onDone = viewModel::lookupMachine,
-                    onScan = { onScan(ScanTarget.MACHINE) }
+                    onScan = { onScan(ScanTarget.MACHINE) },
+                    keyboardType = KeyboardType.Number
                 )
                 state.machineInfo?.let { HintText(listOf(it.model, it.status).filter(String::isNotBlank).joinToString(" • ")) }
             }
@@ -269,7 +275,10 @@ fun MachineLogScreen(
 
             item {
                 Button(
-                    onClick = viewModel::submit,
+                    onClick = {
+                        if (state.hasActiveProcess) showExitConfirmation = true
+                        else viewModel.submit()
+                    },
                     enabled = !state.submitBlocked,
                     modifier = Modifier.fillMaxWidth().height(54.dp)
                 ) {
@@ -308,6 +317,16 @@ fun MachineLogScreen(
     if (showHistory) {
         HistoryDialog(state.history) { showHistory = false }
     }
+    if (showExitConfirmation && state.hasActiveProcess) {
+        ExitWorkConfirmationDialog(
+            state = state,
+            onDismiss = { showExitConfirmation = false },
+            onConfirm = {
+                showExitConfirmation = false
+                viewModel.submit()
+            }
+        )
+    }
     if (state.submitSuccess) {
         val returnHome = {
             viewModel.consumeSubmitSuccess()
@@ -322,6 +341,51 @@ fun MachineLogScreen(
             }
         )
     }
+}
+
+@Composable
+private fun ExitWorkConfirmationDialog(
+    state: MachineLogUiState,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    var confirmed by remember(state.process?.processNo) { mutableStateOf(false) }
+    val staffName = state.staffInfo?.fullName?.trim().orEmpty()
+        .ifBlank { "Nhân viên ${state.staffNo}" }
+    val workDescription = if (state.isJigJob) {
+        "Đồ gá: ${state.jigDescription.ifBlank { state.job }}"
+    } else {
+        "Công đoạn: ${state.job}"
+    }
+    val serial = state.process?.serial2?.trim().orEmpty().ifBlank { state.serialSummary }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Xác nhận thoát máy ${state.machine}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("$staffName đang chuẩn bị kết thúc công việc trên máy ${state.machine}.")
+                Text(workDescription, fontWeight = FontWeight.SemiBold)
+                if (serial.isNotBlank()) Text("Serial: $serial")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { confirmed = !confirmed }
+                ) {
+                    Checkbox(checked = confirmed, onCheckedChange = { confirmed = it })
+                    Text("Tôi xác nhận kết thúc công việc này")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = confirmed && !state.submitting
+            ) { Text("XÁC NHẬN THOÁT MÁY") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !state.submitting) { Text("Ở LẠI") }
+        }
+    )
 }
 
 @Composable

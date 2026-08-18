@@ -1,1 +1,1 @@
-Đồ gá hiện và gửi đầy đủ số lượng Đạt, Hỏng, Làm lại như công việc bình thường; vẫn không cần Routing, LSX hoặc serial. Sau khi gửi thành công, ứng dụng xác nhận và quay về trang chủ để tránh khai báo trùng.
+Đồ gá hiện và gửi đầy đủ số lượng Đạt, Hỏng, Làm lại. Mã máy tự tra cứu khi đủ 3 số; nút tự khóa trong lúc gửi; xác nhận rõ thông tin trước khi thoát máy; gửi xong force về trang chủ.
