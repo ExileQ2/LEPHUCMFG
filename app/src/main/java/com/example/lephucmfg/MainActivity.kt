@@ -5,6 +5,12 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.IOException
 
 import com.example.lephucmfg.ABTestingActivity
@@ -26,10 +32,9 @@ class MainActivity : AppCompatActivity() {
 
         // Set current app version in bottom left corner
         val txtVersion = findViewById<TextView>(R.id.txtVersion)
-        txtVersion.text = "v${getAppVersion()}"
+        txtVersion.text = getDisplayedVersion()
 
-        // Check for updates when app starts
-        updateManager.checkForUpdates()
+        startAutomaticUpdateChecks()
 
         // Load changelog content from assets
         val txtChangeLog = findViewById<TextView>(R.id.txtChangeLog)
@@ -41,8 +46,25 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnMachineLog).setOnClickListener {
             startActivity(Intent(this, MachineLogActivity::class.java))
         }
-        findViewById<Button>(R.id.btnMaterialLog).setOnClickListener {
-            startActivity(Intent(this, MaterialLogActivity::class.java))
+        findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
+            updateManager.checkForUpdates(manual = true)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::updateManager.isInitialized) updateManager.resumePendingUpdate()
+    }
+
+    private fun startAutomaticUpdateChecks() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                updateManager.checkForUpdates()
+                while (isActive) {
+                    delay(UpdateManager.AUTO_CHECK_INTERVAL_MS)
+                    updateManager.checkForUpdates()
+                }
+            }
         }
     }
 
@@ -53,6 +75,11 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             "1.0.0"
         }
+    }
+
+    private fun getDisplayedVersion(): String {
+        val base = getAppVersion()
+        return "v$base"
     }
 
     private fun loadChangelogFromAssets(textView: TextView) {

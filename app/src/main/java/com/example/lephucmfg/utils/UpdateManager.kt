@@ -1,8 +1,10 @@
 package com.example.lephucmfg.utils
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -13,332 +15,246 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.R
-import com.example.lephucmfg.data.AndroidVersionDto
+import com.example.lephucmfg.data.AndroidReleaseDto
 import com.example.lephucmfg.network.RetrofitClient
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
+import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 
-class UpdateManager(private val context: Context) {
+class UpdateManager(private val activity: Activity) {
+    private val service = RetrofitClient.updateService
+    private val preferences = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val gson = Gson()
+    private val checking = AtomicBoolean(false)
+
+    fun checkForUpdates(manual: Boolean = false) {
+        val owner = activity as? LifecycleOwner ?: return
+        if (!manual && !UpdatePolicy.shouldCheckAutomatically(
+                lastSuccessfulCheckMs = preferences.getLong(KEY_LAST_CHECK, 0),
+                nowMs = System.currentTimeMillis(),
+                intervalMs = AUTO_CHECK_INTERVAL_MS
+            )
+        ) return
+        if (!checking.compareAndSet(false, true)) return
+
+        owner.lifecycleScope.launch {
+            try {
+                val installed = installedVersionCode()
+                val response = service.latestRelease(installed)
+                if (!response.isSuccessful) error("Máy chủ trả về ${response.code()}")
+                val release = response.body() ?: error("Thiếu thông tin bản phát hành")
+                preferences.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+                when (UpdatePolicy.evaluate(installed, release.versionCode, release.minSupportedVersionCode)) {
+                    UpdateDecision.NONE -> if (manual) toast("Ứng dụng đang ở bản mới nhất")
+                    UpdateDecision.OPTIONAL -> showUpdateDialog(release, required = false)
+                    UpdateDecision.REQUIRED -> showUpdateDialog(release, required = true)
+                }
+            } catch (error: Exception) {
+                Log.w(TAG, "Update check failed", error)
+                if (manual) toast("Không kiểm tra được cập nhật: ${error.message}")
+            } finally {
+                checking.set(false)
+            }
+        }
+    }
+
+    fun resumePendingUpdate() {
+        val raw = preferences.getString(KEY_PENDING_RELEASE, null) ?: return
+        val release = runCatching { gson.fromJson(raw, AndroidReleaseDto::class.java) }.getOrNull()
+        if (release == null) {
+            clearPending()
+            return
+        }
+        if (canInstallPackages()) {
+            clearPending()
+            downloadAndInstall(release)
+        }
+    }
+
+    fun cleanupAfterInstall() {
+        updateDirectory().listFiles()?.forEach { file ->
+            if (file.extension.equals("apk", true) || file.name.endsWith(".part")) file.delete()
+        }
+    }
+
+    private fun showUpdateDialog(release: AndroidReleaseDto, required: Boolean) {
+        val notes = release.releaseNotes.trim().ifBlank { "Cải thiện độ ổn định và tính năng." }
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle(if (required) "Cần cập nhật" else "Có bản cập nhật")
+            .setMessage("Phiên bản ${release.versionName}\n\n$notes")
+            .setPositiveButton("Tải và cài") { _, _ -> ensurePermissionThenDownload(release) }
+            .setCancelable(!required)
+        if (!required) dialog.setNegativeButton("Để sau", null)
+        dialog.show()
+    }
+
+    private fun ensurePermissionThenDownload(release: AndroidReleaseDto) {
+        if (canInstallPackages()) {
+            downloadAndInstall(release)
+            return
+        }
+        preferences.edit().putString(KEY_PENDING_RELEASE, gson.toJson(release)).apply()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.startActivity(
+                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}"))
+            )
+            toast("Bật 'Cho phép từ nguồn này'; app sẽ tự tiếp tục")
+        }
+    }
+
+    private fun downloadAndInstall(release: AndroidReleaseDto) {
+        val owner = activity as? LifecycleOwner ?: return
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_download_progress, null)
+        val progress = view.findViewById<ProgressBar>(R.id.progressBar)
+        val percent = view.findViewById<TextView>(R.id.txtProgress)
+        val detail = view.findViewById<TextView>(R.id.txtDownloadInfo)
+        val dialog = AlertDialog.Builder(activity).setView(view).setCancelable(false).create()
+        dialog.show()
+
+        owner.lifecycleScope.launch {
+            val result = runCatching {
+                val apk = downloadVerifiedRelease(release) { downloaded, total ->
+                    val value = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    progress.progress = value
+                    percent.text = "$value%"
+                    detail.text = "${downloaded / MB} MB / ${if (total > 0) total / MB else "?"} MB"
+                }
+                install(apk)
+            }
+            dialog.dismiss()
+            result.onFailure {
+                Log.e(TAG, "Update failed", it)
+                toast("Cập nhật thất bại: ${it.message}")
+            }
+        }
+    }
+
+    private suspend fun downloadVerifiedRelease(
+        release: AndroidReleaseDto,
+        onProgress: suspend (Long, Long) -> Unit
+    ): File = withContext(Dispatchers.IO) {
+        val directory = updateDirectory()
+        directory.listFiles()?.filter { it.name.endsWith(".part") }?.forEach(File::delete)
+        val partial = File(directory, "LPMFG-${release.versionCode}.apk.part")
+        val target = File(directory, "LPMFG-${release.versionCode}.apk")
+        target.delete()
+
+        val response = service.downloadRelease(release.downloadUrl)
+        if (!response.isSuccessful) error("Tải APK lỗi ${response.code()}")
+        val body = response.body() ?: error("APK rỗng")
+        val total = body.contentLength().takeIf { it > 0 } ?: release.sizeBytes
+        body.byteStream().use { input ->
+            FileOutputStream(partial).use { output ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var downloaded = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    output.write(buffer, 0, count)
+                    downloaded += count
+                    if (downloaded % (512 * 1024) < count) withContext(Dispatchers.Main) {
+                        onProgress(downloaded, total)
+                    }
+                }
+                output.fd.sync()
+            }
+        }
+        if (release.sizeBytes > 0 && partial.length() != release.sizeBytes) {
+            partial.delete()
+            error("Kích thước APK không khớp")
+        }
+        val actualHash = sha256(partial)
+        if (!actualHash.equals(release.sha256, ignoreCase = true)) {
+            partial.delete()
+            error("APK không đúng mã kiểm tra")
+        }
+        if (!partial.renameTo(target)) error("Không hoàn tất được tệp tải")
+        verifyPackage(target, release.versionCode)
+        withContext(Dispatchers.Main) { onProgress(target.length(), target.length()) }
+        target
+    }
+
+    private fun verifyPackage(apk: File, expectedVersionCode: Int) {
+        val archive = packageInfo(apk.absolutePath) ?: error("APK không hợp lệ")
+        if (archive.packageName != activity.packageName) error("APK không đúng ứng dụng")
+        if (versionCode(archive) != expectedVersionCode.toLong()) error("APK sai phiên bản")
+        val installed = packageInfo(null) ?: error("Không đọc được chữ ký hiện tại")
+        if (signatureDigest(installed) != signatureDigest(archive)) error("Chữ ký APK không khớp")
+    }
+
+    private fun install(apk: File) {
+        val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", apk)
+        activity.startActivity(
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+
+    @Suppress("DEPRECATION")
+    private fun packageInfo(archivePath: String?): PackageInfo? {
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else PackageManager.GET_SIGNATURES
+        return if (archivePath == null) {
+            activity.packageManager.getPackageInfo(activity.packageName, flags)
+        } else {
+            activity.packageManager.getPackageArchiveInfo(archivePath, flags)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun signatureDigest(info: PackageInfo): String {
+        val bytes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signingInfo = info.signingInfo ?: error("APK thiếu chữ ký")
+            val signatures = if (signingInfo.hasMultipleSigners()) {
+                signingInfo.apkContentsSigners
+            } else signingInfo.signingCertificateHistory
+            signatures.firstOrNull()?.toByteArray()
+        } else info.signatures?.firstOrNull()?.toByteArray()
+        return bytes?.let(::sha256) ?: error("APK thiếu chữ ký")
+    }
+
+    private fun installedVersionCode(): Int = packageInfo(null)?.let(::versionCode)?.toInt() ?: 0
+
+    @Suppress("DEPRECATION")
+    private fun versionCode(info: PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else info.versionCode.toLong()
+
+    private fun sha256(file: File): String = file.inputStream().use { input ->
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
+        .digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun updateDirectory() = File(activity.cacheDir, "updates").apply { mkdirs() }
+    private fun canInstallPackages() = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || activity.packageManager.canRequestPackageInstalls()
+    private fun clearPending() = preferences.edit().remove(KEY_PENDING_RELEASE).apply()
+    private fun toast(text: String) = Toast.makeText(activity, text, Toast.LENGTH_LONG).show()
 
     companion object {
+        const val AUTO_CHECK_INTERVAL_MS = 60 * 60 * 1000L
+
         private const val TAG = "UpdateManager"
-        private const val APK_FILE_NAME = "app_update.apk"
-    }
-
-    private val updateService = RetrofitClient.updateService
-
-    fun checkForUpdates() {
-        // Use lifecycleScope if context is an Activity, otherwise use a different approach
-        if (context is androidx.lifecycle.LifecycleOwner) {
-            context.lifecycleScope.launch {
-                try {
-                    val response = updateService.checkVersion()
-                    if (response.isSuccessful) {
-                        response.body()?.let { versionInfo ->
-                            handleVersionResponse(versionInfo)
-                        }
-                    } else {
-                        Log.e(TAG, "Failed to check version: ${response.code()}")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error checking for updates", e)
-                }
-            }
-        }
-    }
-
-    private fun handleVersionResponse(versionInfo: AndroidVersionDto) {
-        val currentVersion = getCurrentAppVersion()
-        val latestVersion = versionInfo.latestVersion
-
-        Log.d(TAG, "Current version: $currentVersion, Latest version: $latestVersion")
-
-        if (isUpdateAvailable(currentVersion, latestVersion)) {
-            showUpdateDialog(versionInfo)
-        } else {
-            Log.d(TAG, "App is up to date")
-        }
-    }
-
-    private fun getCurrentAppVersion(): String {
-        return try {
-            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            packageInfo.versionName ?: "1.0.0"
-        } catch (e: PackageManager.NameNotFoundException) {
-            "1.0.0"
-        }
-    }
-
-    private fun isUpdateAvailable(currentVersion: String, latestVersion: String): Boolean {
-        // Simple version comparison - you can make this more sophisticated if needed
-        return currentVersion != latestVersion
-    }
-
-    private fun showUpdateDialog(versionInfo: AndroidVersionDto) {
-        val builder = AlertDialog.Builder(context)
-        builder.setTitle("Cập nhật ứng dụng")
-        builder.setMessage("Phiên bản mới (${versionInfo.latestVersion}) đã có sẵn.")
-
-        builder.setPositiveButton("Cập nhật") { _, _ ->
-            if (checkInstallPermission()) {
-                startDownload(versionInfo)
-            } else {
-                requestInstallPermission()
-            }
-        }
-
-        // Remove the "Later" button and make dialog non-cancelable
-        builder.setCancelable(false)
-
-        builder.show()
-    }
-
-    private fun checkInstallPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.packageManager.canRequestPackageInstalls()
-        } else {
-            true
-        }
-    }
-
-    private fun requestInstallPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = Uri.parse("package:${context.packageName}")
-            }
-            context.startActivity(intent)
-            Toast.makeText(context, "Vui lòng bật 'Cài đặt ứng dụng không rõ nguồn gốc' và thử lại", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun startDownload(versionInfo: AndroidVersionDto) {
-        // Create custom progress dialog
-        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_download_progress, null)
-        val progressBar = dialogView.findViewById<ProgressBar>(R.id.progressBar)
-        val txtProgress = dialogView.findViewById<TextView>(R.id.txtProgress)
-        val txtDownloadInfo = dialogView.findViewById<TextView>(R.id.txtDownloadInfo)
-
-        val progressDialog = AlertDialog.Builder(context)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        progressDialog.show()
-
-        if (context is androidx.lifecycle.LifecycleOwner) {
-            context.lifecycleScope.launch {
-                try {
-                    txtDownloadInfo.text = "Đang kết nối đến máy chủ..."
-
-                    val success = downloadApkWithProgress(progressBar, txtProgress, txtDownloadInfo)
-                    progressDialog.dismiss()
-
-                    if (success) {
-                        txtDownloadInfo.text = "Tải xuống hoàn tất! Đang cài đặt..."
-                        installApk()
-                    } else {
-                        Toast.makeText(context, "Tải xuống thất bại. Vui lòng thử lại.", Toast.LENGTH_LONG).show()
-                    }
-                } catch (e: Exception) {
-                    progressDialog.dismiss()
-                    Log.e(TAG, "Download error", e)
-                    Toast.makeText(context, "Lỗi tải xuống: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    private suspend fun downloadApkWithProgress(
-        progressBar: ProgressBar,
-        txtProgress: TextView,
-        txtDownloadInfo: TextView
-    ): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = updateService.downloadApk()
-                if (response.isSuccessful) {
-                    response.body()?.let { body ->
-                        withContext(Dispatchers.Main) {
-                            txtDownloadInfo.text = "Đang tải..."
-                        }
-                        saveApkFileWithProgress(body, progressBar, txtProgress, txtDownloadInfo)
-                        true
-                    } ?: false
-                } else {
-                    Log.e(TAG, "Download failed: ${response.code()}")
-                    false
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Download exception", e)
-                false
-            }
-        }
-    }
-
-    private suspend fun saveApkFileWithProgress(
-        body: ResponseBody,
-        progressBar: ProgressBar,
-        txtProgress: TextView,
-        txtDownloadInfo: TextView
-    ): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                val apkFile = File(context.getExternalFilesDir(null), APK_FILE_NAME)
-                val inputStream: InputStream = body.byteStream()
-                val outputStream = FileOutputStream(apkFile)
-
-                val totalBytes = body.contentLength()
-                var downloadedBytes = 0L
-                val buffer = ByteArray(4096)
-                var bytesRead: Int
-
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                    downloadedBytes += bytesRead
-
-                    // Update progress on main thread
-                    val progress = if (totalBytes > 0) {
-                        ((downloadedBytes * 100) / totalBytes).toInt()
-                    } else {
-                        0
-                    }
-
-                    withContext(Dispatchers.Main) {
-                        progressBar.progress = progress
-                        txtProgress.text = "$progress%"
-
-                        val downloadedMB = downloadedBytes / (1024 * 1024)
-                        val totalMB = totalBytes / (1024 * 1024)
-                        txtDownloadInfo.text = if (totalBytes > 0) {
-                            "Đã tải $downloadedMB  / $totalMB "
-                        } else {
-                            "Đã tải $downloadedMB "
-                        }
-                    }
-                }
-
-                outputStream.close()
-                inputStream.close()
-
-                withContext(Dispatchers.Main) {
-                    progressBar.progress = 100
-                    txtProgress.text = "100%"
-                    txtDownloadInfo.text = "Tải xuống hoàn tất!"
-                }
-
-                Log.d(TAG, "APK saved to: ${apkFile.absolutePath}")
-                true
-            } catch (e: Exception) {
-                Log.e(TAG, "Error saving APK", e)
-                false
-            }
-        }
-    }
-
-    private fun installApk() {
-        try {
-            val apkFile = File(context.getExternalFilesDir(null), APK_FILE_NAME)
-            if (apkFile.exists()) {
-                val apkUri = FileProvider.getUriForFile(
-                    context,
-                    "com.example.lephucmfg.fileprovider",
-                    apkFile
-                )
-
-                val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(apkUri, "application/vnd.android.package-archive")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-
-                // Clean up old APK files before starting installation
-                cleanupOldApkFiles()
-
-                context.startActivity(installIntent)
-            } else {
-                Toast.makeText(context, "Không tìm thấy tệp APK", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error installing APK", e)
-            Toast.makeText(context, "Lỗi cài đặt: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun cleanupOldApkFiles() {
-        try {
-            val filesDir = context.getExternalFilesDir(null)
-            Log.d(TAG, "=== CLEANUP OLD APK FILES ===")
-            Log.d(TAG, "Files directory: ${filesDir?.absolutePath}")
-
-            val allFiles = filesDir?.listFiles()
-            Log.d(TAG, "Total files in directory: ${allFiles?.size ?: 0}")
-
-            allFiles?.forEach { file ->
-                Log.d(TAG, "Checking file: ${file.name} (size: ${file.length()} bytes)")
-                if (file.name.endsWith(".apk") && file.name != APK_FILE_NAME) {
-                    Log.d(TAG, "Found old APK to delete: ${file.name}")
-                    val deleted = file.delete()
-                    Log.d(TAG, "Deletion result for ${file.name}: $deleted")
-                    if (deleted) {
-                        Log.i(TAG, "✅ Successfully deleted old APK: ${file.name}")
-                    } else {
-                        Log.w(TAG, "❌ Failed to delete old APK: ${file.name}")
-                    }
-                } else if (file.name.endsWith(".apk")) {
-                    Log.d(TAG, "Keeping current APK: ${file.name}")
-                }
-            }
-            Log.d(TAG, "=== END CLEANUP OLD APK FILES ===")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up old APK files", e)
-        }
-    }
-
-    // Enhanced cleanup method with detailed logging
-    fun cleanupAfterInstall() {
-        try {
-            Log.d(TAG, "=== CLEANUP AFTER INSTALL ===")
-            val filesDir = context.getExternalFilesDir(null)
-            Log.d(TAG, "Files directory: ${filesDir?.absolutePath}")
-
-            val apkFile = File(context.getExternalFilesDir(null), APK_FILE_NAME)
-            Log.d(TAG, "Looking for APK file: ${apkFile.absolutePath}")
-            Log.d(TAG, "APK file exists: ${apkFile.exists()}")
-
-            if (apkFile.exists()) {
-                Log.d(TAG, "APK file size before deletion: ${apkFile.length()} bytes")
-                val deleted = apkFile.delete()
-                Log.d(TAG, "Deletion result: $deleted")
-
-                if (deleted) {
-                    Log.i(TAG, "✅ Successfully cleaned up APK after install: ${APK_FILE_NAME}")
-                } else {
-                    Log.w(TAG, "❌ Failed to clean up APK after install: ${APK_FILE_NAME}")
-                }
-
-                // Verify deletion
-                Log.d(TAG, "Verification - APK file still exists: ${apkFile.exists()}")
-            } else {
-                Log.d(TAG, "No APK file found to clean up")
-            }
-
-            // List remaining files for verification
-            val remainingFiles = filesDir?.listFiles()?.filter { it.name.endsWith(".apk") }
-            Log.d(TAG, "Remaining APK files after cleanup: ${remainingFiles?.size ?: 0}")
-            remainingFiles?.forEach { file ->
-                Log.d(TAG, "Remaining APK: ${file.name} (${file.length()} bytes)")
-            }
-
-            Log.d(TAG, "=== END CLEANUP AFTER INSTALL ===")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error cleaning up APK after install", e)
-        }
+        private const val PREFS = "android_update_v2"
+        private const val KEY_LAST_CHECK = "last_successful_check"
+        private const val KEY_PENDING_RELEASE = "pending_release"
+        private const val MB = 1024 * 1024
     }
 }

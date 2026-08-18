@@ -19,5 +19,6 @@ object RetrofitClient {
 
     val ab: AbService = retrofit.create(AbService::class.java)
     val updateService: UpdateService = retrofit.create(UpdateService::class.java)
+    val machineLogService: MachineLogApiService = retrofit.create(MachineLogApiService::class.java)
     val retrofitPublic: Retrofit = retrofit
 }

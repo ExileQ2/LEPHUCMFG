@@ -1,4 +1,60 @@
 CHANGELOG:
+LEPHUCMFG v2.0.8
+>SỐ LƯỢNG ĐỒ GÁ:
+- Hiện lại đầy đủ số lượng Đạt, Hỏng và Làm lại khi khai báo đồ gá.
+- Gửi cả ba số lượng lên máy chủ như công việc gia công bình thường.
+- Giữ nguyên luồng đồ gá không cần Routing, lệnh sản xuất hoặc serial.
+LEPHUCMFG v2.0.7
+>KHAI BÁO ĐỒ GÁ:
+- Quét Job bắt đầu bằng G sẽ tự lấy tên đồ gá và điền ghi chú "DO GA - ...".
+- Không mở Routing và không yêu cầu lệnh sản xuất, serial hoặc số lượng cho đồ gá.
+- Giữ nguyên cơ chế khóa máy đang bận và ngoại lệ máy dùng chung 001-013 như trước.
+- Toàn bộ truy xuất dữ liệu đi qua API; ứng dụng không chứa tài khoản SQL.
+LEPHUCMFG v2.0.6
+>CHỌN SERIAL NHANH:
+- Thêm nút Chọn serial rõ ràng trong Khai báo máy.
+- Bung dải K1-K400 thành từng ô để chọn một, chọn nhiều, chọn cách quãng hoặc chọn tất cả.
+- Tự gom lựa chọn liên tiếp thành K1-K100 và đánh dấu các serial đã dùng.
+- Khi kết thúc công việc, giữ serial ban đầu và cho chọn bổ sung số lượng đã gia công.
+- Sửa nút Chọn tất cả trên web khi một Job có nhiều lệnh sản xuất.
+LEPHUCMFG v2.0.5
+>KHÓA MÁY ĐANG BẬN:
+- Chỉ cho khai báo mới khi máy ở trạng thái Đang chờ việc.
+- Máy đang gia công, setup, bảo trì, hỏng hoặc chưa xác định trạng thái sẽ làm xám và khóa phần khai báo công việc.
+- Giữ ngoại lệ nhập đè cho dàn máy dùng chung 001-013 phục vụ đồ gá và việc linh tinh.
+- Người đang chạy công việc trên chính máy đó vẫn có thể kết thúc công việc bình thường.
+>CẬP NHẬT TỰ ĐỘNG:
+- Tự kiểm tra khi mở app, khi quay lại app và mỗi 1 giờ nếu app vẫn đang mở; có bản mới sẽ tự hiện yêu cầu cập nhật.
+LEPHUCMFG v2.0.4
+>QUÉT JOB NHANH:
+- Quét Job No xong tự mở Routing, tự tra cứu và hiện ngay danh sách công đoạn để chọn.
+- Không còn gọi LSX sớm khi chạm Routing, tránh lỗi 400 "khong hop le" với Job gốc như 36694.
+- Khóa tra cứu lặp trong lúc đang tải để tránh double-click.
+LEPHUCMFG v2.0.3
+>SỬA ROUTING:
+- Giữ nguyên toàn bộ Job No đã quét khi mở Routing; ví dụ 36786 không còn bị cắt thành 36.
+- Khi đổi công đoạn, chỉ thay suffix công đoạn đã có và không nối trùng mã.
+LEPHUCMFG v2.0.2
+>TINH GỌN ỨNG DỤNG:
+- Đổi nhãn số lượng "Tốt" thành "Đạt".
+- Gỡ module Nguyên vật liệu cũ khỏi màn hình chính vì công ty đã có hệ thống NVL riêng.
+- Giữ nền tảng module để có thể phát triển lại trong tương lai.
+- Dời nút kiểm tra cập nhật sang bên trái để không che changelog.
+LEPHUCMFG v2.0.1
+>SỬA LỖI:
+- Trả scanner về chế độ QR cơ bản, ổn định như bản cũ.
+- Sửa lỗi bấm Quét làm ứng dụng văng về màn hình chính.
+- Tự tra thông tin khi rời ô nhân viên hoặc mã máy.
+LEPHUCMFG v2.0.0
+>KHAI BÁO MÁY:
+- Viết lại native theo bản web mới nhất: Routing, LSX, serial, số lượng, setup/rework và lịch sử.
+- Scanner mới có đèn, đổi camera, chọn ảnh, zoom và chống quét trùng.
+>CẬP NHẬT:
+- Dùng versionCode, kiểm tra SHA-256, package và chữ ký trước khi cài.
+- Tự dọn bộ nhớ đệm APK; chỉ xin quyền cài nội bộ một lần.
+LEPHUCMFG v1.3.2
+>NHẬT KÝ MÁY:
+- Sửa lỗi nhập đè nhật ký máy cho các máy LINHTINH, DO GA.
 LEPHUCMFG v1.3.1
 >NGUYÊN VẬT LIỆU - NVL (MỚI):
 - Thêm 2 tính năng chính: Nhập phôi và Xuất phôi.

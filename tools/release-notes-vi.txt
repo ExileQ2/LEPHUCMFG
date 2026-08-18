@@ -1,0 +1,1 @@
+Đồ gá hiện và gửi đầy đủ số lượng Đạt, Hỏng, Làm lại như công việc bình thường; vẫn không cần Routing, LSX hoặc serial.

@@ -31,6 +31,17 @@
         android:textSize="10sp"
         android:alpha="0.7" />
 
+    <Button
+        android:id="@+id/btnCheckUpdate"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="4dp"
+        android:layout_marginBottom="28dp"
+        android:text="Kiểm tra cập nhật"
+        android:textSize="11sp" />
+
     <!-- Main Machine Log button - freely positioned and resizable -->
     <Button
         android:id="@+id/btnMachineLog"
@@ -41,32 +52,6 @@
         android:layout_marginStart="20dp"
         android:layout_marginTop="28dp"
         android:text="Nhật ký máy" />
-
-    <!-- Material Log button - freely positioned and resizable -->
-    <Button
-        android:id="@+id/btnMaterialLog"
-        android:layout_width="144dp"
-        android:layout_height="86dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="28dp"
-        android:text="NGUYÊN VẬT LIỆU" />
-
-    <!-- Beta label for Material Log button -->
-    <TextView
-        android:id="@+id/txtMaterialLogBeta"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/btnMaterialLog"
-        android:layout_alignStart="@id/btnMaterialLog"
-        android:layout_alignEnd="@id/btnMaterialLog"
-        android:layout_marginTop="4dp"
-        android:text="(mới)"
-        android:textColor="@android:color/holo_red_dark"
-        android:textSize="12sp"
-        android:textStyle="italic"
-        android:gravity="center" />
 
     <ScrollView
         android:id="@+id/scrollChangeLog"

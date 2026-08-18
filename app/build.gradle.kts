@@ -11,17 +11,29 @@ android {
         applicationId = "com.example.lephucmfg"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4        // Increment this
-        versionName = "1.3.1"  // Update to match what API expects
+        versionCode = 14
+        versionName = "2.0.8"
         // NOTE: APK app-debug.apk is not compatible with 16 KB devices. Some libraries have LOAD segments not aligned at 16 KB boundaries:
         // lib/arm64-v8a/libimage_processing_util_jni.so
         // This is a native library alignment issue, not a Kotlin/Java code issue.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("internalRelease") {
+            val keyPath = System.getenv("LP_ANDROID_KEYSTORE")
+                ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+            storeFile = file(keyPath)
+            storePassword = System.getenv("LP_ANDROID_STORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("LP_ANDROID_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = System.getenv("LP_ANDROID_KEY_PASSWORD") ?: "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("internalRelease")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -64,22 +76,14 @@ dependencies {
     // ZXing QR Scanner
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
-    //note// Camera and ML Kit dependencies for custom scanner with fixed viewfinder
-    //note// Updated to latest versions with 16KB alignment support
-    implementation("androidx.camera:camera-core:1.3.4")
-    implementation("androidx.camera:camera-camera2:1.3.4")
-    implementation("androidx.camera:camera-lifecycle:1.3.4")
-    implementation("androidx.camera:camera-view:1.3.4")
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
-
-    //note// Explicitly include ML Kit common library with 16KB alignment
-    implementation("com.google.mlkit:vision-common:17.3.0")
-
     // Core AndroidX
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0") // ✅ add this line
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.2")
 
     // Network

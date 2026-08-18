@@ -7,7 +7,6 @@
         android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -19,7 +18,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
-        android:requestLegacyExternalStorage="true"
         tools:targetApi="31"
         android:usesCleartextTraffic="true">  <!-- Important for HTTP testing if API is not HTTPS -->
 
@@ -47,18 +45,22 @@
         <activity
             android:name=".ABTestingActivity"
             android:exported="false"/>
-        <activity android:name=".MachineLogActivity" />
+        <activity
+            android:name=".MachineLogActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LEPHUCMFG" />
         <activity android:name=".MaterialLogActivity" android:exported="false" />
 
         <!-- note: Custom scan activity with fixed viewfinder overlay and gallery support -->
         <activity
             android:name=".CustomScanActivity"
             android:exported="false"
+            android:theme="@style/zxing_CaptureTheme"
             android:screenOrientation="portrait" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.lephucmfg.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
