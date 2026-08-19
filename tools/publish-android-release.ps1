@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$BackendRoot = 'D:\lp1\MrQuan\qrlephuc\WebAPI\LPWebAPI',
+    [string]$BackendRoot = '',
     [string]$ReleaseNotes = '',
     [int]$MinSupportedVersionCode = 1,
     [string]$ExpectedSignerSha256 = '6b7ee8e849f5c825c3da49c3745777705962ce9c422671dcf75f11d55e14dbc0',
@@ -10,7 +10,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$backendRootResolved = (Resolve-Path -LiteralPath $BackendRoot).Path
+$backendCandidate = if ([string]::IsNullOrWhiteSpace($BackendRoot)) {
+    Join-Path $projectRoot '..\..\WebAPI\LPWebAPI'
+} else {
+    $BackendRoot
+}
+$backendRootResolved = (Resolve-Path -LiteralPath $backendCandidate).Path
 $releaseNotesPath = Join-Path $PSScriptRoot 'release-notes-vi.txt'
 if ([string]::IsNullOrWhiteSpace($ReleaseNotes) -and (Test-Path -LiteralPath $releaseNotesPath)) {
     $ReleaseNotes = (Get-Content -LiteralPath $releaseNotesPath -Raw -Encoding utf8).Trim()
