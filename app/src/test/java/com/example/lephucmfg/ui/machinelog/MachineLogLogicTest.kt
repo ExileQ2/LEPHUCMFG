@@ -1,11 +1,49 @@
 package com.example.lephucmfg.ui.machinelog
 
+import java.net.SocketTimeoutException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MachineLogLogicTest {
+
+    @Test
+    fun timeoutDetection_followsWrappedCauses() {
+        assertTrue(MachineLogLogic.isTimeout(IllegalStateException(SocketTimeoutException("slow"))))
+        assertFalse(MachineLogLogic.isTimeout(IllegalStateException("bad request")))
+    }
+
+    @Test
+    fun timeoutRecheck_confirmsMatchingStartOrCompletedExit() {
+        assertTrue(
+            MachineLogLogic.submissionWasAppliedAfterTimeout(
+                wasEnding = false,
+                attemptedProcessNo = "",
+                attemptedJob = "G2600387",
+                activeProcessNo = "P123",
+                activeJob = "g2600387"
+            )
+        )
+        assertFalse(
+            MachineLogLogic.submissionWasAppliedAfterTimeout(
+                wasEnding = false,
+                attemptedProcessNo = "",
+                attemptedJob = "G2600387",
+                activeProcessNo = "P124",
+                activeJob = "G2600999"
+            )
+        )
+        assertTrue(
+            MachineLogLogic.submissionWasAppliedAfterTimeout(
+                wasEnding = true,
+                attemptedProcessNo = "P123",
+                attemptedJob = "G2600387",
+                activeProcessNo = "",
+                activeJob = ""
+            )
+        )
+    }
 
     @Test
     fun machineCode_acceptsOnlyTheFirstThreeDigits() {

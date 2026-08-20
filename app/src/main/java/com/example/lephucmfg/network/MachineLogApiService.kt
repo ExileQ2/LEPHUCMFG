@@ -3,13 +3,13 @@ package com.example.lephucmfg.network
 import com.example.lephucmfg.data.machinelog.MachineInfoDto
 import com.example.lephucmfg.data.machinelog.JigWorkInfoDto
 import com.example.lephucmfg.data.machinelog.MachineLogRequest
+import com.example.lephucmfg.data.machinelog.MachineLogSubmitResponse
 import com.example.lephucmfg.data.machinelog.ProcessInfoDto
 import com.example.lephucmfg.data.machinelog.ProductionOrderDto
 import com.example.lephucmfg.data.machinelog.RoutingStepDto
 import com.example.lephucmfg.data.machinelog.SerialDto
 import com.example.lephucmfg.data.machinelog.SerialListDto
 import com.example.lephucmfg.data.machinelog.StaffInfoDto
-import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -45,5 +45,5 @@ interface MachineLogApiService {
     suspend fun getJigWork(@Path("job") job: String): JigWorkInfoDto
 
     @POST("api/postNhatKyGiaCong")
-    suspend fun submit(@Body request: MachineLogRequest): Response<ResponseBody>
+    suspend fun submit(@Body request: MachineLogRequest): Response<MachineLogSubmitResponse>
 }

@@ -326,10 +326,13 @@ fun MachineLogScreen(
             onBack()
         }
         AlertDialog(
-            onDismissRequest = returnHome,
-            title = { Text("Đã lưu thành công") },
+            onDismissRequest = {},
+            title = { Text(state.submitDialogTitle) },
+            text = state.submitDialogMessage.takeIf(String::isNotBlank)?.let { message ->
+                { Text(message) }
+            },
             confirmButton = {
-                Button(onClick = returnHome) { Text("VỀ TRANG CHỦ") }
+                Button(onClick = returnHome) { Text("XÁC NHẬN") }
             }
         )
     }

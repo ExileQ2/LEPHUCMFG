@@ -1,1 +1,1 @@
-Đồ gá nhập đủ Đạt, Hỏng và Làm lại. Mã máy tự tra cứu khi đủ 3 số. Thoát máy có xác nhận. Gửi xong về trang chủ.
+Tự kiểm tra lại sau timeout. Ngăn khai báo trùng và đưa về trang chủ.

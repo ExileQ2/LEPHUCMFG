@@ -51,6 +51,12 @@ data class MachineLogRequest(
     val qtyRework: Int
 )
 
+data class MachineLogSubmitResponse(
+    val saved: Boolean = false,
+    val duplicate: Boolean = false,
+    val resolvedProcessNo: String = ""
+)
+
 data class MachineLogHistoryItem(
     val createdAt: Long,
     val machine: String,

@@ -1,6 +1,7 @@
 package com.example.lephucmfg.ui.machinelog
 
 import java.net.URLDecoder
+import java.net.SocketTimeoutException
 import java.nio.charset.StandardCharsets
 
 object MachineLogLogic {
@@ -117,6 +118,29 @@ object MachineLogLogic {
     }
 
     fun usesRouting(jobNo: String): Boolean = !isJigJob(jobNo)
+
+    fun isTimeout(error: Throwable): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is SocketTimeoutException) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    fun submissionWasAppliedAfterTimeout(
+        wasEnding: Boolean,
+        attemptedProcessNo: String,
+        attemptedJob: String,
+        activeProcessNo: String,
+        activeJob: String
+    ): Boolean = if (wasEnding) {
+        activeProcessNo.isBlank() ||
+            !activeProcessNo.trim().equals(attemptedProcessNo.trim(), ignoreCase = true)
+    } else {
+        activeProcessNo.isNotBlank() &&
+            activeJob.trim().equals(attemptedJob.trim(), ignoreCase = true)
+    }
 
     fun composeRoutingJob(
         jobNo: String,

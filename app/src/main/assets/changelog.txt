@@ -1,4 +1,8 @@
 CHANGELOG:
+LEPHUCMFG v2.0.9
+>MẠNG CHẬM:
+- Tự kiểm tra lại kết quả sau timeout.
+- Ngăn gửi lặp và đưa về trang chủ.
 LEPHUCMFG v2.0.8
 >KHAI BÁO MÁY:
 - Đồ gá nhập đủ Đạt, Hỏng và Làm lại.

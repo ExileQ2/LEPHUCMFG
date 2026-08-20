@@ -38,9 +38,10 @@ class MachineLogRepository(
 
     suspend fun getJigWork(job: String) = api.getJigWork(job)
 
-    suspend fun submit(request: MachineLogRequest) {
+    suspend fun submit(request: MachineLogRequest): MachineLogSubmitResponse {
         val response = api.submit(request)
         if (!response.isSuccessful) error("Máy chủ từ chối (${response.code()})")
+        return response.body() ?: error("Máy chủ không trả kết quả")
     }
 
     fun savedStaffNo(): String = preferences.getString(KEY_STAFF_NO, "").orEmpty()

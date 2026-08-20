@@ -11,11 +11,13 @@ import com.example.lephucmfg.data.machinelog.ProcessInfoDto
 import com.example.lephucmfg.data.machinelog.RoutingStepDto
 import com.example.lephucmfg.data.machinelog.StaffInfoDto
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 enum class ScanTarget { STAFF, MACHINE, JOB, PRODUCTION_ORDER, SERIAL }
 
@@ -46,6 +48,8 @@ data class MachineLogUiState(
     val loading: Boolean = false,
     val submitting: Boolean = false,
     val submitSuccess: Boolean = false,
+    val submitDialogTitle: String = "Đã lưu thành công",
+    val submitDialogMessage: String = "",
     val message: String? = null
 ) {
     val hasActiveProcess: Boolean get() = !process?.processNo.isNullOrBlank()
@@ -104,7 +108,9 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
     fun setSetup(value: Boolean) = _state.update { it.copy(setup = value) }
     fun setRework(value: Boolean) = _state.update { it.copy(rework = value) }
     fun consumeMessage() = _state.update { it.copy(message = null) }
-    fun consumeSubmitSuccess() = _state.update { it.copy(submitSuccess = false) }
+    fun consumeSubmitSuccess() = _state.update {
+        it.copy(submitSuccess = false, submitDialogTitle = "", submitDialogMessage = "")
+    }
 
     fun lookupStaff() {
         val staff = state.value.staffNo.trim()
@@ -376,41 +382,132 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
         if (current.submitBlocked || submitJob?.isActive == true) return
         _state.update { it.copy(submitting = true, message = null) }
         submitJob = viewModelScope.launch {
-            runCatching {
-                val jigWork = current.isJigJob
-                val request = MachineLogRequest(
-                    processNo = current.process?.processNo.orEmpty().trim(),
-                    jobControlNo = current.job.trim(),
-                    staffNo = current.staffNo.trim(),
-                    mcName = current.machine.trim(),
-                    note = current.note.trim(),
-                    proOrdNo = if (jigWork) "" else current.productionOrder.trim(),
-                    serial = if (jigWork) "" else current.serialSummary,
-                    setup = if (jigWork) false else current.setup,
-                    rework = if (jigWork) false else current.rework,
-                    qtyGood = current.qtyGood.toIntOrNull() ?: 0,
-                    qtyReject = current.qtyReject.toIntOrNull() ?: 0,
-                    qtyRework = current.qtyRework.toIntOrNull() ?: 0
-                )
-                repository.submit(request)
-                val history = MachineLogHistoryItem(
-                    createdAt = System.currentTimeMillis(),
-                    machine = request.mcName,
-                    job = request.jobControlNo,
-                    productionOrder = request.proOrdNo,
-                    serial = request.serial,
-                    action = if (current.hasActiveProcess) "Kết thúc" else "Bắt đầu"
-                )
-                repository.addHistory(history)
-                _state.value = MachineLogUiState(
-                    staffNo = current.staffNo,
-                    staffInfo = current.staffInfo,
-                    history = repository.history(),
-                    submitSuccess = true
-                )
-            }.onFailure(::showError)
+            val request = buildRequest(current)
+            runCatching { repository.submit(request) }
+                .onSuccess { response ->
+                    if (!response.saved) {
+                        showError(IllegalStateException("Máy chủ chưa lưu dữ liệu"))
+                    } else if (response.duplicate) {
+                        showAlreadySubmitted(current, request, recordHistory = false)
+                    } else {
+                        showCompleted(current, request)
+                    }
+                }
+                .onFailure { error ->
+                    if (MachineLogLogic.isTimeout(error)) {
+                        handleSubmitTimeout(current, request)
+                    } else {
+                        showError(error)
+                    }
+                }
             _state.update { it.copy(submitting = false) }
         }
+    }
+
+    private fun buildRequest(current: MachineLogUiState): MachineLogRequest {
+        val jigWork = current.isJigJob
+        return MachineLogRequest(
+            processNo = current.process?.processNo.orEmpty().trim(),
+            jobControlNo = current.job.trim(),
+            staffNo = current.staffNo.trim(),
+            mcName = current.machine.trim(),
+            note = current.note.trim(),
+            proOrdNo = if (jigWork) "" else current.productionOrder.trim(),
+            serial = if (jigWork) "" else current.serialSummary,
+            setup = if (jigWork) false else current.setup,
+            rework = if (jigWork) false else current.rework,
+            qtyGood = current.qtyGood.toIntOrNull() ?: 0,
+            qtyReject = current.qtyReject.toIntOrNull() ?: 0,
+            qtyRework = current.qtyRework.toIntOrNull() ?: 0
+        )
+    }
+
+    private suspend fun handleSubmitTimeout(
+        current: MachineLogUiState,
+        request: MachineLogRequest
+    ) {
+        delay(SUBMIT_RECHECK_DELAY_MS)
+        val activeProcess = runCatching {
+            withTimeout(SUBMIT_RECHECK_TIMEOUT_MS) {
+                repository.getActiveProcess(request.staffNo, request.mcName)
+            }
+        }.getOrNull()
+        val wasApplied = activeProcess != null &&
+            MachineLogLogic.submissionWasAppliedAfterTimeout(
+                wasEnding = current.hasActiveProcess,
+                attemptedProcessNo = request.processNo,
+                attemptedJob = request.jobControlNo,
+                activeProcessNo = activeProcess.processNo,
+                activeJob = activeProcess.jobControlNo
+            )
+
+        if (wasApplied) {
+            showAlreadySubmitted(current, request, recordHistory = true)
+        } else {
+            showTerminalDialog(
+                current = current,
+                title = "Timeout",
+                message = "Không có phản hồi từ mạng nội bộ"
+            )
+        }
+    }
+
+    private fun showCompleted(current: MachineLogUiState, request: MachineLogRequest) {
+        addHistory(current, request)
+        showTerminalDialog(current, title = "Đã lưu thành công", message = "")
+    }
+
+    private fun showAlreadySubmitted(
+        current: MachineLogUiState,
+        request: MachineLogRequest,
+        recordHistory: Boolean
+    ) {
+        if (recordHistory) addHistory(current, request)
+        val staffName = current.staffInfo?.fullName?.trim().orEmpty()
+            .ifBlank { "nhân viên ${request.staffNo}" }
+        val work = if (current.isJigJob) {
+            "đồ gá ${current.jigDescription.ifBlank { request.jobControlNo }}"
+        } else {
+            buildList {
+                add("công đoạn ${request.jobControlNo}")
+                if (request.proOrdNo.isNotBlank()) add("LSX ${request.proOrdNo}")
+                if (request.serial.isNotBlank()) add("serial ${request.serial}")
+            }.joinToString(", ")
+        }
+        showTerminalDialog(
+            current = current,
+            title = "Đã ghi nhận",
+            message = "Bạn $staffName đã khai báo $work trên máy ${request.mcName} rồi. " +
+                "Chương trình sẽ quay về trang chủ."
+        )
+    }
+
+    private fun addHistory(current: MachineLogUiState, request: MachineLogRequest) {
+        repository.addHistory(
+            MachineLogHistoryItem(
+                createdAt = System.currentTimeMillis(),
+                machine = request.mcName,
+                job = request.jobControlNo,
+                productionOrder = request.proOrdNo,
+                serial = request.serial,
+                action = if (current.hasActiveProcess) "Kết thúc" else "Bắt đầu"
+            )
+        )
+    }
+
+    private fun showTerminalDialog(
+        current: MachineLogUiState,
+        title: String,
+        message: String
+    ) {
+        _state.value = MachineLogUiState(
+            staffNo = current.staffNo,
+            staffInfo = current.staffInfo,
+            history = repository.history(),
+            submitSuccess = true,
+            submitDialogTitle = title,
+            submitDialogMessage = message
+        )
     }
 
     private fun launchLookup(block: suspend () -> Unit) {
@@ -428,5 +525,7 @@ class MachineLogViewModel(application: Application) : AndroidViewModel(applicati
 
     private companion object {
         const val MACHINE_CODE_LENGTH = 3
+        const val SUBMIT_RECHECK_DELAY_MS = 1_000L
+        const val SUBMIT_RECHECK_TIMEOUT_MS = 8_000L
     }
 }
