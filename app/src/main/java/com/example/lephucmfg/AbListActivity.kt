@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.lephucmfg.data.AbRow
 import com.example.lephucmfg.network.RetrofitClient
 import com.example.lephucmfg.ui.AbAdapter
+import com.example.lephucmfg.utils.startAutomaticUpdateChecks
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -16,6 +17,7 @@ class AbListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startAutomaticUpdateChecks()
         setContentView(R.layout.activity_ab_list)
 
         val rv = findViewById<RecyclerView>(R.id.rv)

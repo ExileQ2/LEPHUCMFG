@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.data.AbInsertDto
 import com.example.lephucmfg.network.RetrofitClient
+import com.example.lephucmfg.utils.startAutomaticUpdateChecks
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -16,6 +17,7 @@ class ABTestingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startAutomaticUpdateChecks()
         setContentView(R.layout.activity_ab_testing)
 
         val etA = findViewById<EditText>(R.id.etA)

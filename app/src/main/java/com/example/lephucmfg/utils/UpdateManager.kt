@@ -15,12 +15,14 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.R
 import com.example.lephucmfg.data.AndroidReleaseDto
 import com.example.lephucmfg.network.RetrofitClient
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,9 +36,13 @@ class UpdateManager(private val activity: Activity) {
     private val preferences = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val gson = Gson()
     private val checking = AtomicBoolean(false)
+    private val updating = AtomicBoolean(false)
+    private var updateDialog: AlertDialog? = null
 
-    fun checkForUpdates(manual: Boolean = false) {
+    suspend fun checkForUpdates(manual: Boolean = false) {
         val owner = activity as? LifecycleOwner ?: return
+        if (!owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (updating.get()) return
         if (!manual && !UpdatePolicy.shouldCheckAutomatically(
                 lastSuccessfulCheckMs = preferences.getLong(KEY_LAST_CHECK, 0),
                 nowMs = System.currentTimeMillis(),
@@ -45,24 +51,24 @@ class UpdateManager(private val activity: Activity) {
         ) return
         if (!checking.compareAndSet(false, true)) return
 
-        owner.lifecycleScope.launch {
-            try {
-                val installed = installedVersionCode()
-                val response = service.latestRelease(installed)
-                if (!response.isSuccessful) error("Máy chủ trả về ${response.code()}")
-                val release = response.body() ?: error("Thiếu thông tin bản phát hành")
-                preferences.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-                when (UpdatePolicy.evaluate(installed, release.versionCode, release.minSupportedVersionCode)) {
-                    UpdateDecision.NONE -> if (manual) toast("Ứng dụng đang ở bản mới nhất")
-                    UpdateDecision.OPTIONAL -> showUpdateDialog(release, required = false)
-                    UpdateDecision.REQUIRED -> showUpdateDialog(release, required = true)
-                }
-            } catch (error: Exception) {
-                Log.w(TAG, "Update check failed", error)
-                if (manual) toast("Không kiểm tra được cập nhật: ${error.message}")
-            } finally {
-                checking.set(false)
+        try {
+            val installed = installedVersionCode()
+            val response = service.latestRelease(installed)
+            if (!response.isSuccessful) error("Máy chủ trả về ${response.code()}")
+            val release = response.body() ?: error("Thiếu thông tin bản phát hành")
+            preferences.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+            when (UpdatePolicy.evaluate(installed, release.versionCode, release.minSupportedVersionCode)) {
+                UpdateDecision.NONE -> if (manual) toast("Ứng dụng đang ở bản mới nhất")
+                UpdateDecision.OPTIONAL -> showUpdateDialog(release, required = false)
+                UpdateDecision.REQUIRED -> showUpdateDialog(release, required = true)
             }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "Update check failed", error)
+            if (manual) toast("Không kiểm tra được cập nhật: ${error.message}")
+        } finally {
+            checking.set(false)
         }
     }
 
@@ -86,13 +92,19 @@ class UpdateManager(private val activity: Activity) {
     }
 
     private fun showUpdateDialog(release: AndroidReleaseDto, required: Boolean) {
+        if (updateDialog?.isShowing == true) return
         val notes = release.releaseNotes.trim().ifBlank { "Cải thiện độ ổn định và tính năng." }
-        val dialog = AlertDialog.Builder(activity)
+        val builder = AlertDialog.Builder(activity)
             .setTitle(if (required) "Cần cập nhật" else "Có bản cập nhật")
             .setMessage("Phiên bản ${release.versionName}\n\n$notes")
             .setPositiveButton("Tải và cài") { _, _ -> ensurePermissionThenDownload(release) }
             .setCancelable(!required)
-        if (!required) dialog.setNegativeButton("Để sau", null)
+        if (!required) builder.setNegativeButton("Để sau", null)
+        val dialog = builder.create()
+        dialog.setOnDismissListener {
+            if (updateDialog === dialog) updateDialog = null
+        }
+        updateDialog = dialog
         dialog.show()
     }
 
@@ -112,6 +124,7 @@ class UpdateManager(private val activity: Activity) {
 
     private fun downloadAndInstall(release: AndroidReleaseDto) {
         val owner = activity as? LifecycleOwner ?: return
+        if (!updating.compareAndSet(false, true)) return
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_download_progress, null)
         val progress = view.findViewById<ProgressBar>(R.id.progressBar)
         val percent = view.findViewById<TextView>(R.id.txtProgress)
@@ -120,7 +133,7 @@ class UpdateManager(private val activity: Activity) {
         dialog.show()
 
         owner.lifecycleScope.launch {
-            val result = runCatching {
+            try {
                 val apk = downloadVerifiedRelease(release) { downloaded, total ->
                     val value = if (total > 0) ((downloaded * 100) / total).toInt() else 0
                     progress.progress = value
@@ -128,11 +141,14 @@ class UpdateManager(private val activity: Activity) {
                     detail.text = "${downloaded / MB} MB / ${if (total > 0) total / MB else "?"} MB"
                 }
                 install(apk)
-            }
-            dialog.dismiss()
-            result.onFailure {
-                Log.e(TAG, "Update failed", it)
-                toast("Cập nhật thất bại: ${it.message}")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.e(TAG, "Update failed", error)
+                toast("Cập nhật thất bại: ${error.message}")
+            } finally {
+                dialog.dismiss()
+                updating.set(false)
             }
         }
     }
@@ -249,7 +265,8 @@ class UpdateManager(private val activity: Activity) {
     private fun toast(text: String) = Toast.makeText(activity, text, Toast.LENGTH_LONG).show()
 
     companion object {
-        const val AUTO_CHECK_INTERVAL_MS = 60 * 60 * 1000L
+        const val AUTO_CHECK_INTERVAL_MS = 5 * 60 * 1000L
+        const val AUTO_CHECK_POLL_MS = 60 * 1000L
 
         private const val TAG = "UpdateManager"
         private const val PREFS = "android_update_v2"

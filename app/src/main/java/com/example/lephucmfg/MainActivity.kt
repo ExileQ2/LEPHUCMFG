@@ -5,16 +5,13 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.IOException
 
 import com.example.lephucmfg.ABTestingActivity
 import com.example.lephucmfg.utils.UpdateManager
+import com.example.lephucmfg.utils.startAutomaticUpdateChecks
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,14 +24,11 @@ class MainActivity : AppCompatActivity() {
         // Initialize update manager
         updateManager = UpdateManager(this)
 
-        // Clean up any leftover APK files from previous installations
-        updateManager.cleanupAfterInstall()
+        startAutomaticUpdateChecks(updateManager, cleanupAfterInstall = true)
 
         // Set current app version in bottom left corner
         val txtVersion = findViewById<TextView>(R.id.txtVersion)
         txtVersion.text = getDisplayedVersion()
-
-        startAutomaticUpdateChecks()
 
         // Load changelog content from assets
         val txtChangeLog = findViewById<TextView>(R.id.txtChangeLog)
@@ -47,24 +41,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, MachineLogActivity::class.java))
         }
         findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
-            updateManager.checkForUpdates(manual = true)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (::updateManager.isInitialized) updateManager.resumePendingUpdate()
-    }
-
-    private fun startAutomaticUpdateChecks() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                updateManager.checkForUpdates()
-                while (isActive) {
-                    delay(UpdateManager.AUTO_CHECK_INTERVAL_MS)
-                    updateManager.checkForUpdates()
-                }
-            }
+            lifecycleScope.launch { updateManager.checkForUpdates(manual = true) }
         }
     }
 

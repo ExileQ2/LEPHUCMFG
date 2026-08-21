@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.lephucmfg.network.RetrofitClient
 import com.example.lephucmfg.utils.StaffPreferences
+import com.example.lephucmfg.utils.startAutomaticUpdateChecks
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.launch
 import retrofit2.http.GET
@@ -135,6 +136,7 @@ class MaterialLogActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startAutomaticUpdateChecks()
         setContentView(R.layout.activity_material_log)
         btnTam = findViewById(R.id.btnTam)
         btnCay = findViewById(R.id.btnCay)

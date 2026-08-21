@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.lephucmfg"
         minSdk = 24
         targetSdk = 34
-        versionCode = 15
-        versionName = "2.0.9"
+        versionCode = 16
+        versionName = "2.0.10"
         // NOTE: APK app-debug.apk is not compatible with 16 KB devices. Some libraries have LOAD segments not aligned at 16 KB boundaries:
         // lib/arm64-v8a/libimage_processing_util_jni.so
         // This is a native library alignment issue, not a Kotlin/Java code issue.

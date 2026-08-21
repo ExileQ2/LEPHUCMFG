@@ -1,4 +1,8 @@
 CHANGELOG:
+LEPHUCMFG v2.0.10
+>CẬP NHẬT TỰ ĐỘNG:
+- Tự kiểm tra phiên bản trên mọi màn hình đang sử dụng.
+- Kiểm tra lại tối đa mỗi 5 phút và tự yêu cầu cập nhật.
 LEPHUCMFG v2.0.9
 >MẠNG CHẬM:
 - Tự kiểm tra lại kết quả sau timeout.

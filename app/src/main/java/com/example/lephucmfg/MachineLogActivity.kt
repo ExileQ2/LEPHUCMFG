@@ -8,6 +8,7 @@ import com.example.lephucmfg.ui.machinelog.MachineLogScreen
 import com.example.lephucmfg.ui.machinelog.MachineLogViewModel
 import com.example.lephucmfg.ui.machinelog.ScanTarget
 import com.example.lephucmfg.ui.theme.LEPHUCMFGTheme
+import com.example.lephucmfg.utils.startAutomaticUpdateChecks
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
@@ -21,6 +22,7 @@ class MachineLogActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startAutomaticUpdateChecks()
         setContent {
             LEPHUCMFGTheme {
                 MachineLogScreen(

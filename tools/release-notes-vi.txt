@@ -1,1 +1,1 @@
-Tự kiểm tra lại sau timeout. Ngăn khai báo trùng và đưa về trang chủ.
+Khôi phục kiểm tra cập nhật trên mọi màn hình. Tự yêu cầu cập nhật tối đa trong 5 phút.
